@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>flightydeck — your Flighty flights in the terminal</title>
+  <meta name="description" content="Unofficial CLI and MCP server for the Flighty macOS app. Read your flights from the app's local database, add and follow flights, and give AI agents safe, structured access.">
+  <meta name="theme-color" content="#07080a">
+  <meta property="og:title" content="flightydeck">
+  <meta property="og:description" content="Your Flighty flights in the terminal and in your AI agent. Unofficial, macOS, single binary.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://theanhgen.github.io/flightydeck/">
+  <link rel="icon" href="mark.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="nav">
+    <div class="wrap nav-inner">
+      <a class="brand" href="#top" aria-label="flightydeck home">
+        <img src="mark.svg" alt="" width="28" height="28">
+        <span>flightydeck</span>
+      </a>
+      <nav aria-label="Sections">
+        <a href="#features">Features</a>
+        <a href="#install">Install</a>
+        <a href="#mcp">MCP</a>
+        <a href="#safety">Safety</a>
+        <a href="#faq">FAQ</a>
+        <a class="gh" href="https://github.com/theanhgen/flightydeck">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero" id="top">
+      <div class="glow" aria-hidden="true"></div>
+      <div class="wrap">
+        <p class="eyebrow"><span class="dot" aria-hidden="true"></span> Unofficial · macOS · single binary</p>
+        <h1>Your flights.<br><span class="grad">Now in the terminal.</span></h1>
+        <p class="lede">
+          <code>flightydeck</code> reads the flights you already track in the Flighty Mac app,
+          straight from its local database, and adds or follows new ones through the same API
+          the app uses. One command line for you, one MCP server for your AI agent.
+        </p>
+        <div class="cta">
+          <a class="btn primary" href="#install">Install</a>
+          <a class="btn ghost" href="https://github.com/theanhgen/flightydeck">View on GitHub</a>
+        </div>
+
+        <div class="board" role="img" aria-label="Example departure board with invented flights, cycling through statuses such as on time, delayed, boarding and cancelled.">
+          <div class="board-head" aria-hidden="true">
+            <span>Flight</span><span>To</span><span>Time</span><span>Status</span>
+          </div>
+          <div class="board-row"></div>
+          <div class="board-row"></div>
+          <div class="board-row"></div>
+          <div class="board-row"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="demo">
+      <div class="wrap">
+        <div class="section-head">
+          <p class="kicker">See it</p>
+          <h2>Plain tables for you. JSON for everything else.</h2>
+        </div>
+        <div class="term" aria-label="Example terminal session">
+          <div class="term-bar" aria-hidden="true"><i></i><i></i><i></i><span>zsh — flightydeck</span></div>
+<pre class="term-body"><code><span class="p">$</span> flightydeck list --upcoming
+<span class="h">DATE        FLIGHT  ROUTE      DEP    STATUS</span>
+2031-03-14  UA901   SFO → LHR  16:40  <span class="ok">on time</span>
+2031-03-18  BA1442  LHR → EDI  14:05  <span class="warn">+25 min</span>
+2031-04-02  UA902   LHR → SFO  11:25  <span class="m">scheduled</span>
+
+<span class="p">$</span> flightydeck status BA1442
+BA1442  London (LHR) → Edinburgh (EDI)
+          scheduled  estimated  gate
+departs   14:05      14:30      A22
+arrives   15:30      15:55      —
+<span class="warn">delayed 25 min</span> · local airport times
+
+<span class="p">$</span> flightydeck get UA901 -o json \
+    | jq .departure_scheduled
+{
+  <span class="k">"utc"</span>: <span class="s">"2031-03-14T23:40:00Z"</span>,
+  <span class="k">"local"</span>: <span class="s">"2031-03-14 16:40"</span>,
+  <span class="k">"tz"</span>: <span class="s">"America/Los_Angeles"</span>
+}</code></pre>
+        </div>
+        <p class="note">Example output with invented flights. Exact columns may differ between versions.</p>
+      </div>
+    </section>
+
+    <section id="features">
+      <div class="wrap">
+        <div class="section-head">
+          <p class="kicker">Features</p>
+          <h2>Everything Flighty knows, one command away.</h2>
+        </div>
+        <div class="grid">
+          <article class="card">
+            <h3>Reads, never writes, your data</h3>
+            <p>Flights, friends, stats and connections come from the app's local SQLite database, opened read-only. No sync server, no scraping.</p>
+          </article>
+          <article class="card">
+            <h3>Times that make sense</h3>
+            <p>Every time is shown in the airport's own zone. JSON carries <code>utc</code>, <code>local</code> and <code>tz</code>, so nothing is ambiguous.</p>
+          </article>
+          <article class="card">
+            <h3>Search the way you type</h3>
+            <p>Accent-insensitive matching on airports, cities and airlines: <code>sao paulo</code> finds São Paulo, <code>malaga</code> finds Málaga.</p>
+          </article>
+          <article class="card">
+            <h3>Built for scripts and agents</h3>
+            <p><code>-o json</code> on every command and stable exit codes, so a shell script or an AI agent can branch on the result instead of parsing prose.</p>
+          </article>
+          <article class="card">
+            <h3>Add and follow flights</h3>
+            <p><code>flightydeck add UA901 2031-03-14</code> adds a flight you're on; <code>follow</code> tracks someone else's. They show up on your phone like any other.</p>
+          </article>
+          <article class="card">
+            <h3>Stats, delays, connections</h3>
+            <p>Distance and time in the air, delay history for a route, layover lengths between your flights, and what your Flighty Friends are flying.</p>
+          </article>
+          <article class="card">
+            <h3>An MCP server included</h3>
+            <p><code>flightydeck mcp</code> exposes the same functions as tools to Claude and other MCP clients. Same code path as the CLI, same safety rules.</p>
+          </article>
+          <article class="card">
+            <h3>One static binary</h3>
+            <p>Written in Rust. No Node, no Python, no runtime to install. Your auth token is read per call, never logged, and wiped from memory after use.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="install">
+      <div class="wrap">
+        <div class="section-head">
+          <p class="kicker">Install</p>
+          <h2>Ready before boarding.</h2>
+          <p>Needs macOS and the Flighty Mac app, installed and signed in. To build from source instead, see the <a href="https://github.com/theanhgen/flightydeck#install">README</a>.</p>
+        </div>
+        <ol class="steps">
+          <li>
+            <span class="step-n">1</span>
+            <div>
+              <h3>Install the binary</h3>
+              <div class="copy">
+                <code>brew install theanhgen/tap/flightydeck</code>
+                <button type="button" data-copy="brew install theanhgen/tap/flightydeck">Copy</button>
+              </div>
+            </div>
+          </li>
+          <li>
+            <span class="step-n">2</span>
+            <div>
+              <h3>Check it can see Flighty</h3>
+              <div class="copy">
+                <code>flightydeck about</code>
+                <button type="button" data-copy="flightydeck about">Copy</button>
+              </div>
+            </div>
+          </li>
+          <li>
+            <span class="step-n">3</span>
+            <div>
+              <h3>List what's coming up</h3>
+              <div class="copy">
+                <code>flightydeck list --upcoming</code>
+                <button type="button" data-copy="flightydeck list --upcoming">Copy</button>
+              </div>
+            </div>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section id="mcp">
+      <div class="wrap two">
+        <div>
+          <p class="kicker">MCP</p>
+          <h2>Give your agent a window seat.</h2>
+          <p>Register the built-in MCP server with Claude Code, or point any MCP client at <code>flightydeck mcp</code> over stdio.</p>
+          <div class="copy">
+            <code>claude mcp add flightydeck -- flightydeck mcp</code>
+            <button type="button" data-copy="claude mcp add flightydeck -- flightydeck mcp">Copy</button>
+          </div>
+          <p class="small">Prefer fewer tools in context? The repo ships an agent skill (<code>skills/flightydeck/SKILL.md</code>) that teaches agents to use the CLI with <code>-o json</code> instead.</p>
+        </div>
+        <ul class="tools" aria-label="MCP tools">
+          <li>flightydeck_list_flights</li>
+          <li>flightydeck_get_flight</li>
+          <li>flightydeck_search_flights</li>
+          <li>flightydeck_current_flights</li>
+          <li>flightydeck_get_flight_status</li>
+          <li>flightydeck_get_delay_forecast</li>
+          <li>flightydeck_list_friend_flights</li>
+          <li>flightydeck_get_flight_stats</li>
+          <li>flightydeck_get_connections</li>
+          <li>flightydeck_search_airports</li>
+          <li>flightydeck_search_airlines</li>
+          <li>flightydeck_about</li>
+          <li>flightydeck_export_ics</li>
+          <li class="w">flightydeck_add_flight</li>
+          <li class="w">flightydeck_follow_flight</li>
+          <li class="d">flightydeck_remove_flight</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="safety">
+      <div class="wrap">
+        <div class="section-head">
+          <p class="kicker">Safety</p>
+          <h2>Cleared for reads. Writes need clearance.</h2>
+          <p>Every command belongs to one safety class. The policy lives in the shared library, so the CLI and the MCP server enforce exactly the same rules.</p>
+        </div>
+        <div class="classes">
+          <article class="cls read">
+            <span class="tag">Read</span>
+            <h3>Always on</h3>
+            <p>list, get, search, current, status, delay, ics, friends, stats, connections, airports, airlines, about.</p>
+          </article>
+          <article class="cls write">
+            <span class="tag">Write</span>
+            <h3>On unless read-only</h3>
+            <p>add, follow. Checks the flight isn't already tracked, and spaces out calls to the API. <code>--dry-run</code> looks the flight up without adding it.</p>
+            <p class="env"><code>FLIGHTY_READ_ONLY=1</code> turns off every write, and overrides everything else.</p>
+          </article>
+          <article class="cls destr">
+            <span class="tag">Destructive · experimental</span>
+            <h3>Off by default</h3>
+            <p>remove. Needs <code>FLIGHTY_ALLOW_REMOVE=1</code> and <code>--yes</code>. The sync semantics it relies on aren't fully verified yet.</p>
+          </article>
+        </div>
+        <ul class="facts">
+          <li>Talks only to <code>https://api.flightyapp.com</code>, with redirects disabled.</li>
+          <li>The auth token is read from the local database per call, never logged or printed, and zeroized after use.</li>
+          <li>Bad input is rejected before any network call.</li>
+        </ul>
+
+        <h3 class="table-title">Exit codes</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th scope="col">Code</th><th scope="col">Meaning</th></tr></thead>
+            <tbody>
+              <tr><td>0</td><td>OK</td></tr>
+              <tr><td>1</td><td>Error (including "Flighty is syncing, retry")</td></tr>
+              <tr><td>2</td><td>Bad input, caught before any network call</td></tr>
+              <tr><td>3</td><td>Not ready: Flighty not installed or signed in, token expired, schema changed, owner unresolved</td></tr>
+              <tr><td>4</td><td>Flighty API error</td></tr>
+              <tr><td>5</td><td>Refused by policy (read-only, remove not enabled)</td></tr>
+              <tr><td>6</td><td>Not found</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="faq">
+      <div class="wrap narrow">
+        <div class="section-head">
+          <p class="kicker">FAQ</p>
+          <h2>Before you fly.</h2>
+        </div>
+        <details>
+          <summary>Is this made by Flighty?</summary>
+          <p>No. flightydeck is an independent, unofficial project. It isn't made by, endorsed by, or affiliated with Flighty.</p>
+        </details>
+        <details>
+          <summary>Do I need a Flighty subscription?</summary>
+          <p>You need the Flighty Mac app installed and signed in. flightydeck can only see and do what your account in the app can.</p>
+        </details>
+        <details>
+          <summary>Does it work on Linux, Windows or iPhone?</summary>
+          <p>No. It reads the Mac app's local database, so it runs on macOS only.</p>
+        </details>
+        <details>
+          <summary>Can it break my Flighty data?</summary>
+          <p>Reads open the database read-only. Adding and following go through the same API the app uses. Removing flights is off unless you explicitly enable it, and <code>FLIGHTY_READ_ONLY=1</code> turns off all writes.</p>
+        </details>
+        <details>
+          <summary>What happens when Flighty updates?</summary>
+          <p>The app's database and API are private and can change without notice. flightydeck checks the schema before each query and exits with code 3, naming the missing column, rather than returning wrong data.</p>
+        </details>
+        <details>
+          <summary>Where does my token go?</summary>
+          <p>Only to <code>api.flightyapp.com</code>, in the request header, the same way the app sends it. It's never written to logs, error messages or JSON output.</p>
+        </details>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <div class="foot-top">
+        <a class="brand" href="#top"><img src="mark.svg" alt="" width="24" height="24"><span>flightydeck</span></a>
+        <nav aria-label="Footer">
+          <a href="https://github.com/theanhgen/flightydeck">GitHub</a>
+          <a href="https://github.com/theanhgen/flightydeck/blob/main/LICENSE">MIT License</a>
+        </nav>
+      </div>
+      <p class="disclaimer">Unofficial. Not made by, endorsed by, or affiliated with Flighty. "Flighty" is a trademark of its owner.</p>
+      <p class="credits">API details learned from CPLX/flighty-mcp-server and LukasHaas/flighty-mcp.</p>
+    </div>
+  </footer>
+
+  <script>
+    // Copy buttons.
+    document.querySelectorAll('[data-copy]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        navigator.clipboard.writeText(btn.dataset.copy).then(function () {
+          btn.textContent = 'Copied';
+          setTimeout(function () { btn.textContent = 'Copy'; }, 1500);
+        });
+      });
+    });
+
+    // Split-flap board: every few seconds the rows flip, letter by letter, to the next set of
+    // flights. Static when motion is reduced; paused while the board is off screen or the tab hidden.
+    (function () {
+      var CHARS = ' ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:';
+      var WIDTHS = [6, 9, 5, 9]; // flight, to, time, status
+      var BOARDS = [
+        [['UA901', 'LONDON', '13:20', 'BOARDING', 'info'],
+         ['AA100', 'NEW YORK', '14:05', 'ON TIME', 'ok'],
+         ['AS330', 'SEATTLE', '14:40', 'DELAY 25', 'warn'],
+         ['JL1', 'TOKYO', '15:10', 'CANCELLED', 'bad']],
+        [['UA901', 'LONDON', '13:20', 'DEPARTED', 'ok'],
+         ['AA100', 'NEW YORK', '14:05', 'GATE B12', 'info'],
+         ['AS330', 'SEATTLE', '15:05', 'BOARDING', 'info'],
+         ['DL410', 'BOSTON', '15:30', 'ON TIME', 'ok']],
+        [['AA100', 'NEW YORK', '14:05', 'LAST CALL', 'warn'],
+         ['AS330', 'SEATTLE', '15:05', 'DEPARTED', 'ok'],
+         ['DL410', 'BOSTON', '15:30', 'DELAY 40', 'warn'],
+         ['UA16', 'CHICAGO', '16:10', 'ON TIME', 'ok']],
+        [['DL410', 'BOSTON', '16:10', 'BOARDING', 'info'],
+         ['UA16', 'CHICAGO', '16:10', 'GATE F4', 'info'],
+         ['BA286', 'LONDON', '16:45', 'ON TIME', 'ok'],
+         ['AS12', 'HONOLULU', '17:20', 'CANCELLED', 'bad']]
+      ];
+      var board = document.querySelector('.board');
+      if (!board) return;
+      var still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      var rows = [].slice.call(board.querySelectorAll('.board-row'));
+
+      // One cell per character; `cells[r]` is the row's flat list of flaps.
+      var cells = rows.map(function (row) {
+        var flat = [];
+        WIDTHS.forEach(function (w, f) {
+          var group = document.createElement('span');
+          group.className = 'field f' + f;
+          group.setAttribute('aria-hidden', 'true');
+          for (var i = 0; i < w; i++) {
+            var cell = document.createElement('span');
+            cell.className = 'flap';
+            cell.textContent = ' ';
+            group.appendChild(cell);
+            flat.push(cell);
+          }
+          row.appendChild(group);
+        });
+        return flat;
+      });
+
+      function text(entry) {
+        return WIDTHS.map(function (w, f) { return (entry[f] + '         ').slice(0, w); }).join('');
+      }
+
+      // Steps a flap forward through the alphabet until it shows `ch`, like the real thing.
+      function flipTo(cell, ch, delay, done) {
+        clearTimeout(cell._t);
+        var target = CHARS.indexOf(ch);
+        if (target < 0) target = 0;
+        function step() {
+          var at = CHARS.indexOf(cell.textContent);
+          if (at === target) { done(); return; }
+          cell.textContent = CHARS[(at + 1) % CHARS.length];
+          cell.classList.remove('tick'); void cell.offsetWidth; cell.classList.add('tick');
+          cell._t = setTimeout(step, 42);
+        }
+        cell._t = setTimeout(step, delay);
+      }
+
+      function show(n, instant) {
+        BOARDS[n].forEach(function (entry, r) {
+          var chars = text(entry), row = rows[r];
+          if (instant) {
+            cells[r].forEach(function (cell, i) { cell.textContent = chars[i]; });
+            row.dataset.status = entry[4];
+            return;
+          }
+          // The status takes its colour once the row has settled.
+          var pending = cells[r].length, turn = (row._turn = (row._turn || 0) + 1);
+          if (cells[r].some(function (cell, i) { return cell.textContent !== chars[i]; })) row.dataset.status = '';
+          cells[r].forEach(function (cell, i) {
+            flipTo(cell, chars[i], r * 180 + i * 22, function () {
+              if (--pending === 0 && row._turn === turn) row.dataset.status = entry[4];
+            });
+          });
+        });
+      }
+
+      if (still) { show(0, true); return; }
+
+      var current = 0, visible = true, timer = null;
+      function next() { current = (current + 1) % BOARDS.length; show(current, false); }
+      function sync() {
+        var run = visible && !document.hidden;
+        if (run && !timer) timer = setInterval(next, 6500);
+        if (!run && timer) { clearInterval(timer); timer = null; }
+      }
+      show(0, false);
+      if ('IntersectionObserver' in window) {
+        new IntersectionObserver(function (e) { visible = e[0].isIntersecting; sync(); }).observe(board);
+      }
+      document.addEventListener('visibilitychange', sync);
+      sync();
+    })();
+  </script>
+</body>
+</html>
