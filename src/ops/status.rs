@@ -169,7 +169,7 @@ fn summary(f: &Flight, phase: &str, now: i64) -> String {
     }
 }
 
-fn resolve(ctx: &Ctx, a: &FlightRef) -> Result<(Connection, Flight)> {
+pub(crate) fn resolve(ctx: &Ctx, a: &FlightRef) -> Result<(Connection, Flight)> {
     let conn = db::open(ctx)?;
     let owner = owner::resolve(ctx, &conn)?;
     let flight = flights::find(&conn, &owner.user_id, &a.flight, a.date.as_deref())?;
@@ -179,15 +179,19 @@ fn resolve(ctx: &Ctx, a: &FlightRef) -> Result<(Connection, Flight)> {
 pub fn flight_status(ctx: &Ctx, a: &FlightRef) -> Result<FlightStatus> {
     let (conn, flight) = resolve(ctx, a)?;
     drop(conn);
-    let now = time::now_unix();
+    Ok(status_at(flight, time::now_unix()))
+}
+
+/// The status of `flight` as of `now` (unix seconds).
+pub(crate) fn status_at(flight: Flight, now: i64) -> FlightStatus {
     let phase = phase(&flight, now);
-    Ok(FlightStatus {
+    FlightStatus {
         phase: phase.to_string(),
         departure_delay_minutes: departure_delay_seconds(&flight).map(|s| s / 60),
         arrival_delay_minutes: arrival_delay_seconds(&flight).map(|s| s / 60),
         summary: summary(&flight, phase, now),
         flight,
-    })
+    }
 }
 
 /// Flighty's own forecast columns for this flight (counts over recent operations).

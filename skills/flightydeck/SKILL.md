@@ -31,6 +31,7 @@ database; `add` and `follow` call Flighty's API. macOS only.
 | Flights to/from somewhere | `flightydeck search --to london -o json` (accent-insensitive) |
 | What's in the air now | `flightydeck current -o json` |
 | Is it delayed, which gate | `flightydeck status UA901 -o json` |
+| Follow a flight over time | `flightydeck watch BA286 --once -o json` for one reading. Without `--once` it keeps running until the flight lands: only start that if the user asked for a running watch |
 | How often is it late | `flightydeck delay UA901 -o json` |
 | Friends' flights | `flightydeck friends --upcoming -o json` |
 | Travel stats | `flightydeck stats --year 2031 -o json` |
@@ -64,6 +65,8 @@ Run `flightydeck <command> --help` for all flags.
   (`add` refuses an already-tracked flight unless `--force`.)
 - `--dry-run` on `add` and `follow` still calls Flighty's search API once per candidate airline.
   Use it to confirm a match, not to browse schedules.
+- `watch` gives an estimated position while a flight is in the air (`position.estimated` is
+  always true). Say "estimated" when you quote it; it is not live tracking and has no altitude.
 - `ics` output contains booking references. Write it where the user asked, nowhere else.
 - `remove` is experimental, off unless `FLIGHTY_ALLOW_REMOVE=1`, and needs `--yes`. Don't enable it
   on the user's behalf.
