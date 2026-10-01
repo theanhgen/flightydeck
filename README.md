@@ -43,6 +43,7 @@ flightydeck airports "sao paulo"         # accent-insensitive: finds São Paulo
 flightydeck stats --year 2031            # distance, time in the air, top routes
 flightydeck add UA901 2031-03-18         # add a flight you're on
 flightydeck ics --upcoming > flights.ics  # your flights for any calendar app
+flightydeck watch BA286 --every 5m       # follow one flight until it lands
 flightydeck list -o json | jq '.[0]'     # JSON for scripts and agents
 ```
 
@@ -57,6 +58,7 @@ Run `flightydeck <command> --help` for every flag.
 | `search` | Filter by `--airline`, `--from`, `--to`, `--after`, `--before` | read |
 | `current` | Flights in the air, just landed, or about to depart | read |
 | `status` | Scheduled, estimated and actual times, delay, gate, terminal, belt | read |
+| `watch` | Follow one flight: status and changes on an interval (`--every 1m`..`24h`, `--once`, `--date`). CLI only | read |
 | `delay` | Historical delay distribution for a flight | read |
 | `ics` | Your flights as an iCalendar (`.ics`) file (`[FLIGHT]`, `--date`, `--upcoming`, `--past`, `--year`, `--include-archived`, `--include-following`) | read |
 | `friends` | Flights of your Flighty Friends (`[NAME]`, `--upcoming`, `--limit`) | read |
@@ -81,6 +83,19 @@ Times are shown in each airport's local zone. In JSON every timestamp is an obje
 ```
 
 Search is accent- and case-insensitive (`sao paulo` finds São Paulo).
+
+### Watching a flight
+
+`flightydeck watch BA286 --every 5m` prints the flight's status now and again every five
+minutes, with whatever changed in between (gate, terminal, belt, times). It stops by itself
+once the flight has landed or was cancelled. With `-o json` each update is one line of JSON,
+and `--once` prints a single update.
+
+It reads the local database, so it only sees what the Flighty app has synced: keep the app
+running. While the flight is in the air it also prints a position, and that position is an
+**estimate**: a point on the direct route, placed by how much of the flight time has passed.
+It is not live tracking, and there is no altitude or real speed. The local database doesn't
+hold them.
 
 ### Calendar export
 
