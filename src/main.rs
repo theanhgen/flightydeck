@@ -7,8 +7,8 @@ use flightydeck::ctx::{Class, Ctx};
 use flightydeck::ops::{
     about, connections, connections::ConnArgs, flights, flights::CurrentArgs, flights::GetArgs,
     flights::ListArgs, flights::SearchArgs, friends, friends::FriendArgs, ics, ics::IcsArgs,
-    reference, reference::LookupArgs, stats, stats::StatsArgs, status, status::FlightRef, write,
-    write::AddArgs, write::RemoveArgs,
+    reference, reference::LookupArgs, stats, stats::StatsArgs, status, status::FlightRef, watch,
+    watch::WatchArgs, write, write::AddArgs, write::RemoveArgs,
 };
 use flightydeck::render::{self, Format};
 use flightydeck::{Error, Result};
@@ -47,6 +47,18 @@ enum Cmd {
     Current(CurrentArgs),
     /// Status of one flight: phase, delays, gates, times.
     Status(FlightRef),
+    /// Follow one flight: print its status again on an interval.
+    #[command(
+        long_about = "Follow one flight: print its status again on an interval, with what changed \
+        (gate, times, delays). Stops when the flight has landed or was cancelled; Ctrl-C stops it sooner.\n\n\
+        Reads the local database only, so it sees what the Flighty app has synced: keep the app \
+        running. While the flight is in the air the position is an ESTIMATE along the direct route, \
+        worked out from the departure and arrival times. It is not live tracking, and there is no \
+        altitude. With -o json each update is one line of JSON.\n\n\
+        Examples:\n  flightydeck watch BA286\n  flightydeck watch BA286 --every 1m\n  \
+        flightydeck watch \"UA 901\" --date 2031-03-14 --every 1h\n  flightydeck -o json watch BA286 --once"
+    )]
+    Watch(WatchArgs),
     /// Delay forecast for a flight code from its local history.
     #[command(visible_alias = "forecast")]
     Delay(FlightRef),
@@ -116,6 +128,7 @@ fn run(cli: Cli) -> Result<()> {
         Cmd::Search(a) => render::print(&flights::search(&ctx, &a)?, f),
         Cmd::Current(a) => render::print(&flights::current(&ctx, &a)?, f),
         Cmd::Status(a) => render::print(&status::flight_status(&ctx, &a)?, f),
+        Cmd::Watch(a) => run_watch(&ctx, &a, f)?,
         Cmd::Delay(a) => render::print(&status::delay_forecast(&ctx, &a)?, f),
         // The file already ends each line itself, so it is printed as is.
         Cmd::Ics(a) => match f {
@@ -139,6 +152,45 @@ fn run(cli: Cli) -> Result<()> {
         Cmd::Mcp => serve_mcp()?,
     }
     Ok(())
+}
+
+/// Prints a reading now and after every interval, until the flight is done or `--once`.
+fn run_watch(ctx: &Ctx, a: &WatchArgs, fmt: Format) -> Result<()> {
+    let every = watch::parse_interval(&a.every)?;
+    let mut target = FlightRef {
+        flight: a.flight.clone(),
+        date: a.date.clone(),
+    };
+    let mut previous: Option<watch::Snapshot> = None;
+    loop {
+        let snap = watch::snapshot(ctx, &target, previous.as_ref())?;
+        let mut out = std::io::stdout().lock();
+        let written = match fmt {
+            Format::Json => serde_json::to_string(&snap)
+                .map_err(|e| Error::Other(format!("serialize: {e}")))
+                .map(|line| writeln!(out, "{line}")),
+            Format::Table => {
+                let at = chrono::Local::now().format("%H:%M");
+                let mut text = format!("{at}  {}", snap.line());
+                for change in &snap.changes {
+                    text.push_str(&format!("\n       changed: {change}"));
+                }
+                Ok(writeln!(out, "{text}"))
+            }
+        }?;
+        // A closed pipe (`| head`) ends the watch quietly.
+        if written.and_then(|()| out.flush()).is_err() || a.once || snap.done {
+            return Ok(());
+        }
+        drop(out);
+        // From now on follow this exact flight, not "the nearest one with this code".
+        target = FlightRef {
+            flight: snap.flight_id.clone(),
+            date: None,
+        };
+        previous = Some(snap);
+        std::thread::sleep(every);
+    }
 }
 
 /// Asks y/N on stderr when stdin is a terminal; without a terminal, only `--yes` confirms.

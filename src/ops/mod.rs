@@ -9,4 +9,5 @@ pub mod ics;
 pub mod reference;
 pub mod stats;
 pub mod status;
+pub mod watch;
 pub mod write;

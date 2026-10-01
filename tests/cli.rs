@@ -11,6 +11,7 @@ const SUBCOMMANDS: &[&str] = &[
     "search",
     "current",
     "status",
+    "watch",
     "delay",
     "ics",
     "friends",
@@ -73,7 +74,7 @@ fn help_works_for_every_subcommand() {
 
 #[test]
 fn long_help_has_examples() {
-    for sub in ["add", "get", "ics", "remove"] {
+    for sub in ["add", "get", "ics", "remove", "watch"] {
         let out = run(flightydeck(&missing_db()).args([sub, "--help"]));
         assert!(
             String::from_utf8_lossy(&out.stdout).contains("Examples:"),
@@ -195,6 +196,43 @@ fn list_on_fixture_prints_table() {
         serde_json::from_slice::<serde_json::Value>(&out.stdout).is_err(),
         "table, not JSON"
     );
+}
+
+#[test]
+fn watch_once_prints_one_reading() {
+    let fx = common::fixture();
+    let out = run(flightydeck(&fx.db).args(["watch", "IB888", "--once"]));
+    assert!(out.status.success());
+    let text = String::from_utf8(out.stdout).unwrap();
+    assert_eq!(text.lines().count(), 1, "{text}");
+    assert!(
+        text.contains("in the air") && text.contains("estimated"),
+        "{text}"
+    );
+
+    let out = run(flightydeck(&fx.db).args(["-o", "json", "watch", "IB888", "--once"]));
+    let text = String::from_utf8(out.stdout).unwrap();
+    assert_eq!(text.lines().count(), 1, "one JSON object per line");
+    let v: serde_json::Value = serde_json::from_str(&text).unwrap();
+    assert_eq!(v["phase"], "in_air");
+    assert_eq!(v["position"]["estimated"], true);
+}
+
+#[test]
+fn watch_stops_by_itself_when_the_flight_is_over() {
+    let fx = common::fixture();
+    // No --once: a cancelled flight ends the watch after the first reading.
+    let out = run(flightydeck(&fx.db).args(["watch", "AM7777", "--every", "1m"]));
+    assert!(out.status.success());
+    assert!(String::from_utf8_lossy(&out.stdout).contains("CANCELLED"));
+}
+
+#[test]
+fn watch_rejects_a_bad_interval_before_reading_anything() {
+    for every in ["10s", "2d", "soon"] {
+        let out = run(flightydeck(&missing_db()).args(["watch", "IB111", "--every", every]));
+        assert_eq!(out.status.code(), Some(2), "{every}");
+    }
 }
 
 #[test]
