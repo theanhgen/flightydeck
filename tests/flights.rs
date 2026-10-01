@@ -95,6 +95,53 @@ fn upcoming_past_and_limit() {
 }
 
 #[test]
+fn year_filter() {
+    let fx = fixture();
+    let year = |y| {
+        ids(&flights::list(
+            &fx.ctx(),
+            &ListArgs {
+                year: Some(y),
+                ..Default::default()
+            },
+        )
+        .unwrap())
+    };
+    // 2025: the manual flight and f05 (f06 is archived).
+    assert_eq!(year(2025), vec![MANUAL.to_string(), fid(5)]);
+    assert_eq!(year(2031), vec![fid(1), fid(2), fid(3), fid(4), fid(9)]);
+    assert!(year(1999).is_empty());
+}
+
+#[test]
+fn offset_pages_without_gaps_or_repeats() {
+    let fx = fixture();
+    let ctx = fx.ctx();
+    let page = |upcoming, past, offset| {
+        ids(&flights::list(
+            &ctx,
+            &ListArgs {
+                upcoming,
+                past,
+                limit: Some(2),
+                offset: Some(offset),
+                ..Default::default()
+            },
+        )
+        .unwrap())
+    };
+    // Upcoming pages run forward in time.
+    assert_eq!(page(true, false, 0), vec![fid(1), fid(2)]);
+    assert_eq!(page(true, false, 2), vec![fid(3), fid(4)]);
+    assert_eq!(page(true, false, 4), vec![fid(9)]);
+    assert!(page(true, false, 5).is_empty());
+    assert!(page(true, false, 99).is_empty());
+    // Past pages run backward from the most recent.
+    assert_eq!(page(false, true, 0), vec![fid(5), fid(10)]);
+    assert_eq!(page(false, true, 2), vec![MANUAL.to_string()]);
+}
+
+#[test]
 fn manual_flight_included_with_duration() {
     let fx = fixture();
     let list = flights::list(&fx.ctx(), &ListArgs::default()).unwrap();

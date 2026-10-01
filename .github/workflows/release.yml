@@ -1,0 +1,52 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin, x86_64-apple-darwin
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Tag matches Cargo.toml
+        run: |
+          version="$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].version')"
+          test "v$version" = "$GITHUB_REF_NAME" || { echo "tag $GITHUB_REF_NAME != crate v$version"; exit 1; }
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - run: scripts/check-public.sh
+      - run: cargo test
+
+      - name: Build universal binary
+        run: |
+          cargo build --release --target aarch64-apple-darwin
+          cargo build --release --target x86_64-apple-darwin
+          mkdir dist
+          lipo -create -output dist/flightydeck \
+            target/aarch64-apple-darwin/release/flightydeck \
+            target/x86_64-apple-darwin/release/flightydeck
+          codesign --force --sign - dist/flightydeck
+          cp README.md LICENSE dist/
+          dist/flightydeck --version
+
+      - name: Package
+        run: |
+          name="flightydeck-$VERSION-macos-universal.tar.gz"
+          tar -czf "$name" -C dist flightydeck README.md LICENSE
+          shasum -a 256 "$name" > "$name.sha256"
+          cat "$name.sha256"
+          echo "ASSET=$name" >> "$GITHUB_ENV"
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" "$ASSET" "$ASSET.sha256" --title "$GITHUB_REF_NAME" --generate-notes

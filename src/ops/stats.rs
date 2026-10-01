@@ -173,8 +173,7 @@ fn top(counts: HashMap<String, usize>) -> Vec<(String, usize)> {
 }
 
 fn year_of(leg: &Leg) -> Option<i32> {
-    let date = time::local_date(leg.dep_time?, leg.dep_tz.as_deref())?;
-    date.get(..4)?.parse().ok()
+    time::local_year(leg.dep_time?, leg.dep_tz.as_deref())
 }
 
 /// Statistics for a known owner id (`stats` resolves the owner first).

@@ -6,8 +6,8 @@ use clap::{Parser, Subcommand};
 use flightydeck::ctx::{Class, Ctx};
 use flightydeck::ops::{
     about, connections, connections::ConnArgs, flights, flights::CurrentArgs, flights::GetArgs,
-    flights::ListArgs, flights::SearchArgs, friends, friends::FriendArgs, reference,
-    reference::LookupArgs, stats, stats::StatsArgs, status, status::FlightRef, write,
+    flights::ListArgs, flights::SearchArgs, friends, friends::FriendArgs, ics, ics::IcsArgs,
+    reference, reference::LookupArgs, stats, stats::StatsArgs, status, status::FlightRef, write,
     write::AddArgs, write::RemoveArgs,
 };
 use flightydeck::render::{self, Format};
@@ -50,6 +50,16 @@ enum Cmd {
     /// Delay forecast for a flight code from its local history.
     #[command(visible_alias = "forecast")]
     Delay(FlightRef),
+    /// Your flights as an iCalendar (.ics) file, for any calendar app.
+    #[command(
+        long_about = "Print your flights as an iCalendar (.ics) file, for any calendar app.\n\n\
+        Reads the local database only. Each event's UID is the Flighty flight id, so importing a \
+        newer export updates events in calendar apps that match on UID. Times are UTC; the calendar \
+        app shows them in your zone. With -o json the file is in the `ics` field.\n\n\
+        Examples:\n  flightydeck ics --upcoming > flights.ics\n  flightydeck ics --year 2031 > 2031.ics\n  \
+        flightydeck ics QR111 --date 2031-03-17 > qr111.ics"
+    )]
+    Ics(IcsArgs),
     /// Flights of your connected Flighty friends.
     Friends(FriendArgs),
     /// Statistics of your own flights, lifetime or per year.
@@ -107,6 +117,11 @@ fn run(cli: Cli) -> Result<()> {
         Cmd::Current(a) => render::print(&flights::current(&ctx, &a)?, f),
         Cmd::Status(a) => render::print(&status::flight_status(&ctx, &a)?, f),
         Cmd::Delay(a) => render::print(&status::delay_forecast(&ctx, &a)?, f),
+        // The file already ends each line itself, so it is printed as is.
+        Cmd::Ics(a) => match f {
+            Format::Table => print!("{}", ics::ics(&ctx, &a)?.ics),
+            Format::Json => render::print(&ics::ics(&ctx, &a)?, f),
+        },
         Cmd::Friends(a) => render::print(&friends::list(&ctx, &a)?, f),
         Cmd::Stats(a) => render::print(&stats::stats(&ctx, &a)?, f),
         Cmd::Connections(a) => render::print(&connections::list(&ctx, &a)?, f),

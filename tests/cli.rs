@@ -12,6 +12,7 @@ const SUBCOMMANDS: &[&str] = &[
     "current",
     "status",
     "delay",
+    "ics",
     "friends",
     "stats",
     "connections",
@@ -72,7 +73,7 @@ fn help_works_for_every_subcommand() {
 
 #[test]
 fn long_help_has_examples() {
-    for sub in ["add", "get", "remove"] {
+    for sub in ["add", "get", "ics", "remove"] {
         let out = run(flightydeck(&missing_db()).args([sub, "--help"]));
         assert!(
             String::from_utf8_lossy(&out.stdout).contains("Examples:"),
@@ -194,6 +195,28 @@ fn list_on_fixture_prints_table() {
         serde_json::from_slice::<serde_json::Value>(&out.stdout).is_err(),
         "table, not JSON"
     );
+}
+
+#[test]
+fn ics_prints_a_calendar_file() {
+    let fx = common::fixture();
+    let out = run(flightydeck(&fx.db).args(["ics", "--upcoming"]));
+    assert!(out.status.success());
+    let text = String::from_utf8(out.stdout).unwrap();
+    assert!(text.starts_with("BEGIN:VCALENDAR\r\n"));
+    assert!(text.ends_with("END:VCALENDAR\r\n"), "no extra newline");
+    assert_eq!(text.matches("BEGIN:VEVENT").count(), 5);
+
+    let out = run(flightydeck(&fx.db).args(["-o", "json", "ics", "--upcoming"]));
+    let v = json(&out);
+    assert_eq!(v["count"], 5);
+    assert_eq!(v["ics"], text);
+}
+
+#[test]
+fn ics_date_needs_a_flight() {
+    let out = run(flightydeck(&missing_db()).args(["ics", "--date", "2031-03-17"]));
+    assert_eq!(out.status.code(), Some(2));
 }
 
 #[test]

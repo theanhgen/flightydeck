@@ -24,6 +24,10 @@ pub struct AddArgs {
     #[arg(long)]
     #[serde(default)]
     pub force: bool,
+    /// Only look the flight up and report the match; nothing is added.
+    #[arg(long)]
+    #[serde(default)]
+    pub dry_run: bool,
 }
 
 #[derive(Debug, Clone, Deserialize, JsonSchema, clap::Args)]
@@ -38,7 +42,7 @@ pub struct RemoveArgs {
 
 #[derive(Debug, Clone, Serialize, JsonSchema)]
 pub struct WriteResult {
-    /// "added" | "followed" | "already_tracked" | "removed"
+    /// "added" | "followed" | "would_add" | "would_follow" | "already_tracked" | "removed"
     pub outcome: String,
     pub flight_code: Option<String>,
     pub date: Option<String>,
@@ -64,6 +68,7 @@ struct Wanted {
     number: String,
     date: String,
     force: bool,
+    dry_run: bool,
 }
 
 impl Wanted {
@@ -97,13 +102,17 @@ fn validate(a: &AddArgs) -> Result<Wanted> {
         number: caps[2].to_string(),
         date: date.to_string(),
         force: a.force,
+        dry_run: a.dry_run,
     })
 }
 
 /// Validation, then policy: both before touching the DB, credentials or network.
 fn check(ctx: &Ctx, a: &AddArgs) -> Result<Wanted> {
     let w = validate(a)?;
-    ctx.guard(Class::Write)?;
+    // A dry run only searches, so it is allowed in read-only mode.
+    if !w.dry_run {
+        ctx.guard(Class::Write)?;
+    }
     Ok(w)
 }
 
@@ -279,6 +288,26 @@ fn track(
     if !w.force && tracked_by_id(&db::open(ctx)?, owner_id, &flight_id)? {
         return Ok(already_tracked(w, flight_id));
     }
+    if w.dry_run {
+        let (outcome, verb) = if passenger {
+            ("would_add", "add")
+        } else {
+            ("would_follow", "follow")
+        };
+        return Ok(WriteResult {
+            outcome: outcome.into(),
+            flight_code: Some(w.code()),
+            date: Some(w.date.clone()),
+            message: format!(
+                "Dry run: would {verb} {} on {} ({}, {flight_id}); nothing was sent.",
+                w.code(),
+                w.date,
+                airline.name
+            ),
+            flight_id: Some(flight_id),
+            airline: Some(airline.name.clone()),
+        });
+    }
     client.subscribe(&flight_id, passenger)?;
     let (outcome, verb) = if passenger {
         ("added", "Added")
@@ -354,6 +383,7 @@ mod tests {
             flight: flight.into(),
             date: date.into(),
             force: false,
+            dry_run: false,
         }
     }
 
@@ -504,6 +534,40 @@ mod tests {
             mock.requests()[1].target,
             format!("/v1/flight/{F01}/subscribe?is_passenger=true&source")
         );
+    }
+
+    #[test]
+    fn dry_run_searches_but_never_subscribes() {
+        let (_d, mut ctx) = testing::ctx();
+        // Read-only too: a dry run is a read.
+        ctx.read_only = true;
+        let mock = Mock::start(vec![
+            (200, found(NEW)),
+            (200, found(NEW)),
+            (200, found(F01)),
+        ]);
+        let c = client(&ctx, &mock);
+        let dry = |flight: &str, date: &str, force: bool| AddArgs {
+            dry_run: true,
+            force,
+            ..args(flight, date)
+        };
+
+        let r = add_for(&ctx, OWNER, &dry("QR999", "2031-04-01", false), &c).unwrap();
+        assert_eq!(r.outcome, "would_add");
+        assert_eq!(r.flight_id.as_deref(), Some(NEW));
+        assert_eq!(r.airline.as_deref(), Some("Qatar Airways"));
+
+        let r = follow_for(&ctx, OWNER, &dry("QR999", "2031-04-01", true), &c).unwrap();
+        assert_eq!(r.outcome, "would_follow");
+
+        // A flight the owner already has is still reported as tracked.
+        let r = add_for(&ctx, OWNER, &dry("QR111", "2031-03-18", false), &c).unwrap();
+        assert_eq!(r.outcome, "already_tracked");
+
+        let reqs = mock.requests();
+        assert_eq!(reqs.len(), 3);
+        assert!(reqs.iter().all(|r| r.target == "/v1/search"));
     }
 
     #[test]

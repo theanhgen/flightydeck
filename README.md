@@ -14,12 +14,21 @@ Website: <https://theanhgen.github.io/flightydeck/>
 
 ## Install
 
-Requirements: macOS, the Flighty Mac app installed and signed in, and a Rust toolchain.
+Requirements: macOS, and the Flighty Mac app installed and signed in.
 
 ```sh
-cargo install --git https://github.com/theanhgen/flightydeck   # installs the `flightydeck` binary
-flightydeck about                                              # checks it can find Flighty
+brew install theanhgen/tap/flightydeck
+flightydeck about                        # checks it can find Flighty
 ```
+
+Or build it yourself with a Rust toolchain:
+
+```sh
+cargo install --git https://github.com/theanhgen/flightydeck
+```
+
+Each [release](https://github.com/theanhgen/flightydeck/releases) also carries the universal
+(Apple Silicon + Intel) binary as a tarball with its SHA-256.
 
 It's a single static binary. No Node or Python runtime.
 
@@ -31,6 +40,7 @@ flightydeck status QR111                 # schedule vs estimate vs actual, gate,
 flightydeck airports "con dao"           # accent-insensitive: finds Côn Đảo
 flightydeck stats --year 2031            # distance, time in the air, top routes
 flightydeck add VN333 2031-03-18         # add a flight you're on
+flightydeck ics --upcoming > flights.ics  # your flights for any calendar app
 flightydeck list -o json | jq '.[0]'     # JSON for scripts and agents
 ```
 
@@ -40,19 +50,20 @@ Run `flightydeck <command> --help` for every flag.
 
 | Command | What it does | Class |
 |---|---|---|
-| `list` | Your flights (`--upcoming`, `--past`, `--include-archived`, `--include-following`, `--limit`) | read |
+| `list` | Your flights (`--upcoming`, `--past`, `--year`, `--include-archived`, `--include-following`, `--limit`, `--offset`) | read |
 | `get` | One flight by code or Flighty UUID (`--date`), including ticket details | read |
 | `search` | Filter by `--airline`, `--from`, `--to`, `--after`, `--before` | read |
 | `current` | Flights in the air, just landed, or about to depart | read |
 | `status` | Scheduled, estimated and actual times, delay, gate, terminal, belt | read |
 | `delay` | Historical delay distribution for a flight | read |
+| `ics` | Your flights as an iCalendar (`.ics`) file (`[FLIGHT]`, `--date`, `--upcoming`, `--past`, `--year`, `--include-archived`, `--include-following`) | read |
 | `friends` | Flights of your Flighty Friends (`[NAME]`, `--upcoming`, `--limit`) | read |
 | `stats` | Totals, distance, time in the air, top airlines, airports, routes | read |
 | `connections` | Layovers between your flights, with minimum connection time | read |
 | `airports` | Search airports by IATA, ICAO, city or name | read |
 | `airlines` | Search airlines by IATA, ICAO or name | read |
 | `about` | Version, mode, whether the database and a token were found (never the token) | read |
-| `add` | Add a flight you're on (`<FLIGHT_NO> <DATE>`, `--force`) | write |
+| `add` | Add a flight you're on (`<FLIGHT_NO> <DATE>`, `--force`, `--dry-run`) | write |
 | `follow` | Track someone else's flight (same arguments as `add`) | write |
 | `remove` | Remove a flight by id. **Experimental**, see [Safety](#safety) | destructive |
 | `mcp` | Run the MCP server over stdio | — |
@@ -68,6 +79,14 @@ Times are shown in each airport's local zone. In JSON every timestamp is an obje
 ```
 
 Search is accent- and case-insensitive (`con dao` finds Côn Đảo).
+
+### Calendar export
+
+`flightydeck ics` prints an iCalendar file built from the local database, with no network call.
+Each flight is one event from departure to arrival (best-known times, in UTC), with the
+terminal, gate, seat, booking reference and aircraft in the notes. The event UID is the Flighty
+flight id, so calendar apps that match on UID update an event when you import a newer export.
+The file holds your booking references, so treat it like the tickets themselves.
 
 ### Exit codes
 
@@ -104,6 +123,7 @@ Any MCP client that can launch a stdio server works the same way: the command is
 | `flightydeck_get_flight_status`, `flightydeck_get_delay_forecast` | read |
 | `flightydeck_list_friend_flights`, `flightydeck_get_flight_stats`, `flightydeck_get_connections` | read |
 | `flightydeck_search_airports`, `flightydeck_search_airlines`, `flightydeck_about` | read |
+| `flightydeck_export_ics` | read |
 | `flightydeck_add_flight`, `flightydeck_follow_flight` | write (not registered when read-only) |
 | `flightydeck_remove_flight` | destructive (registered only with `FLIGHTY_ALLOW_REMOVE=1`) |
 
@@ -121,7 +141,8 @@ and the MCP server follow the same rules.
 - **Read** is always on. The database is opened read-only, once per operation.
 - **Write** (`add`, `follow`) is on unless `FLIGHTY_READ_ONLY=1`. Before subscribing it checks
   the flight isn't already tracked (`--force` overrides), and write calls are spaced out with
-  backoff on rate limits.
+  backoff on rate limits. `--dry-run` only looks the flight up and reports the match; nothing
+  is added, so it also works in read-only mode.
 - **Destructive** (`remove`) is off unless `FLIGHTY_ALLOW_REMOVE=1`, and needs `--yes`. It is
   experimental: the sync behaviour it relies on isn't fully verified. Try it only on a flight
   you added for the purpose.
