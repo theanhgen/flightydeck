@@ -6,7 +6,13 @@
     </linearGradient>
   </defs>
   <rect width="64" height="64" rx="15" fill="#111316"/>
-  <rect x="12" y="41" width="40" height="4" rx="2" fill="#2b2f36"/>
-  <rect x="16" y="49" width="32" height="4" rx="2" fill="#23262c"/>
-  <path d="M13 31.5 L47 19 Q53 17 53.5 20.5 Q54 23 48.5 25 L37 29.5 L30.5 38 L26 38.5 L29 31.6 L20.5 34.2 L17.5 37.5 L14.5 37.7 L16.2 33.1 Z" fill="url(#g)"/>
+  <!-- One split-flap tile: lighter upper leaf, darker lower leaf. -->
+  <rect x="11" y="9" width="42" height="46" rx="6" fill="#191c21"/>
+  <path d="M11 32 V15 a6 6 0 0 1 6 -6 h30 a6 6 0 0 1 6 6 V32 z" fill="#272b32"/>
+  <!-- F -->
+  <path d="M22 16 H43 V23.5 H30 V28.5 H40 V35.5 H30 V48 H22 Z" fill="url(#g)"/>
+  <!-- Hinge and its two pins. -->
+  <rect x="11" y="31.2" width="42" height="1.6" fill="#07080a"/>
+  <rect x="8.5" y="29.5" width="3.5" height="5" rx="1.2" fill="#3a404a"/>
+  <rect x="52" y="29.5" width="3.5" height="5" rx="1.2" fill="#3a404a"/>
 </svg>
