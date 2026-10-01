@@ -55,6 +55,11 @@ pub fn local_date(unix: i64, tz: Option<&str>) -> Option<String> {
     })
 }
 
+/// Local calendar year of a unix time in `tz` (UTC if unknown).
+pub fn local_year(unix: i64, tz: Option<&str>) -> Option<i32> {
+    local_date(unix, tz)?.get(..4)?.parse().ok()
+}
+
 /// "2h 10m"
 pub fn duration(minutes: i64) -> String {
     let (h, m) = (minutes / 60, minutes % 60);

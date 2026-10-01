@@ -144,7 +144,7 @@ arrives    16:15       16:40       —        —      T1   belt 7
         <div class="section-head">
           <p class="kicker">Install</p>
           <h2>Ready before boarding.</h2>
-          <p>Needs macOS, the Flighty Mac app installed and signed in, and a Rust toolchain.</p>
+          <p>Needs macOS and the Flighty Mac app, installed and signed in. Or build from source with <code>cargo install --git https://github.com/theanhgen/flightydeck</code>.</p>
         </div>
         <ol class="steps">
           <li>
@@ -152,8 +152,8 @@ arrives    16:15       16:40       —        —      T1   belt 7
             <div>
               <h3>Install the binary</h3>
               <div class="copy">
-                <code>cargo install --git https://github.com/theanhgen/flightydeck</code>
-                <button type="button" data-copy="cargo install --git https://github.com/theanhgen/flightydeck">Copy</button>
+                <code>brew install theanhgen/tap/flightydeck</code>
+                <button type="button" data-copy="brew install theanhgen/tap/flightydeck">Copy</button>
               </div>
             </div>
           </li>
@@ -206,6 +206,7 @@ arrives    16:15       16:40       —        —      T1   belt 7
           <li>flightydeck_search_airports</li>
           <li>flightydeck_search_airlines</li>
           <li>flightydeck_about</li>
+          <li>flightydeck_export_ics</li>
           <li class="w">flightydeck_add_flight</li>
           <li class="w">flightydeck_follow_flight</li>
           <li class="d">flightydeck_remove_flight</li>
@@ -224,12 +225,12 @@ arrives    16:15       16:40       —        —      T1   belt 7
           <article class="cls read">
             <span class="tag">Read</span>
             <h3>Always on</h3>
-            <p>list, get, search, current, status, delay, friends, stats, connections, airports, airlines, about.</p>
+            <p>list, get, search, current, status, delay, ics, friends, stats, connections, airports, airlines, about.</p>
           </article>
           <article class="cls write">
             <span class="tag">Write</span>
             <h3>On unless read-only</h3>
-            <p>add, follow. Checks the flight isn't already tracked, and spaces out calls to the API.</p>
+            <p>add, follow. Checks the flight isn't already tracked, and spaces out calls to the API. <code>--dry-run</code> looks the flight up without adding it.</p>
             <p class="env"><code>FLIGHTY_READ_ONLY=1</code> turns off every write, and overrides everything else.</p>
           </article>
           <article class="cls destr">

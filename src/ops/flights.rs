@@ -35,9 +35,15 @@ pub struct ListArgs {
     #[arg(long)]
     #[serde(default)]
     pub include_following: bool,
+    /// Only flights departing in this calendar year (local date at the departure airport).
+    #[arg(long)]
+    pub year: Option<i32>,
     /// Maximum number of flights (default 50).
     #[arg(long)]
     pub limit: Option<u32>,
+    /// Skip this many flights before applying the limit, for paging.
+    #[arg(long)]
+    pub offset: Option<u32>,
 }
 
 #[derive(Debug, Clone, Deserialize, JsonSchema, clap::Args)]
@@ -272,6 +278,16 @@ fn departure_date(f: &Flight) -> Option<String> {
         .map(|s| s.unix)
         .or_else(|| departure_time(f))?;
     time::local_date(unix, f.from.tz.as_deref())
+}
+
+/// Local calendar year of the scheduled departure, the same rule `stats --year` uses.
+fn departure_year(f: &Flight) -> Option<i32> {
+    let unix = f
+        .departure_scheduled
+        .as_ref()
+        .map(|s| s.unix)
+        .or_else(|| departure_time(f))?;
+    time::local_year(unix, f.from.tz.as_deref())
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -702,6 +718,18 @@ pub(crate) fn apply_limit(
     flights
 }
 
+/// Skip `offset` flights from the end `apply_limit` keeps: the first ones for upcoming lists,
+/// the most recent otherwise.
+fn apply_offset(mut flights: Vec<Flight>, offset: Option<u32>, from_start: bool) -> Vec<Flight> {
+    let n = (offset.unwrap_or(0) as usize).min(flights.len());
+    if from_start {
+        flights.drain(..n);
+    } else {
+        flights.truncate(flights.len() - n);
+    }
+    flights
+}
+
 pub(crate) fn flight_list(owner: &str, flights: Vec<Flight>) -> FlightList {
     FlightList {
         owner_user_id: owner.to_string(),
@@ -740,7 +768,9 @@ pub fn list(ctx: &Ctx, a: &ListArgs) -> Result<FlightList> {
                 let t = departure_time(f).unwrap_or(0);
                 (!a.upcoming || t >= now) && (!a.past || t < now)
             })
+            .filter(|f| a.year.is_none() || departure_year(f) == a.year)
             .collect();
+        let flights = apply_offset(flights, a.offset, a.upcoming);
         Ok(flight_list(
             owner,
             apply_limit(flights, a.limit, a.upcoming),

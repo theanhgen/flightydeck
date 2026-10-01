@@ -24,6 +24,7 @@ const READ_TOOLS: &[&str] = &[
     "flightydeck_search_airports",
     "flightydeck_search_airlines",
     "flightydeck_about",
+    "flightydeck_export_ics",
 ];
 const WRITE_TOOLS: &[&str] = &["flightydeck_add_flight", "flightydeck_follow_flight"];
 const REMOVE_TOOL: &str = "flightydeck_remove_flight";

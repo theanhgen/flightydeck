@@ -14,6 +14,7 @@ fn args(flight: &str, date: &str) -> AddArgs {
         flight: flight.into(),
         date: date.into(),
         force: false,
+        dry_run: false,
     }
 }
 

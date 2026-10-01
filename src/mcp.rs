@@ -9,8 +9,8 @@ use crate::ctx::{Class, Ctx};
 use crate::error::Error;
 use crate::ops::{
     about, connections, connections::ConnArgs, flights, flights::CurrentArgs, flights::GetArgs,
-    flights::ListArgs, flights::SearchArgs, friends, friends::FriendArgs, reference,
-    reference::LookupArgs, stats, stats::StatsArgs, status, status::FlightRef, write,
+    flights::ListArgs, flights::SearchArgs, friends, friends::FriendArgs, ics, ics::IcsArgs,
+    reference, reference::LookupArgs, stats, stats::StatsArgs, status, status::FlightRef, write,
     write::AddArgs, write::RemoveArgs,
 };
 
@@ -80,7 +80,7 @@ type ToolResult = Result<CallToolResult, ErrorData>;
 impl FlightyServer {
     #[tool(
         name = "flightydeck_list_flights",
-        description = "List the owner's flights (newest first). Filters: upcoming, past, include_archived, include_following, limit.",
+        description = "List the owner's flights (newest first). Filters: upcoming, past, year, include_archived, include_following, limit, offset.",
         annotations(read_only_hint = true)
     )]
     async fn list_flights(&self, Parameters(a): Parameters<ListArgs>) -> ToolResult {
@@ -187,8 +187,17 @@ impl FlightyServer {
     }
 
     #[tool(
+        name = "flightydeck_export_ics",
+        description = "The owner's flights as an iCalendar (.ics) file in the `ics` field, from the local database. One flight (code or UUID) or filters: upcoming, past, year, include_archived, include_following.",
+        annotations(read_only_hint = true)
+    )]
+    async fn export_ics(&self, Parameters(a): Parameters<IcsArgs>) -> ToolResult {
+        self.run(move |c| ics::ics(c, &a)).await
+    }
+
+    #[tool(
         name = "flightydeck_add_flight",
-        description = "Add a flight you are flying to your Flighty account (code + local departure date YYYY-MM-DD).",
+        description = "Add a flight you are flying to your Flighty account (code + local departure date YYYY-MM-DD); dry_run=true only looks it up.",
         annotations(
             read_only_hint = false,
             destructive_hint = false,
@@ -201,7 +210,7 @@ impl FlightyServer {
 
     #[tool(
         name = "flightydeck_follow_flight",
-        description = "Follow a flight you are not on (code + local departure date YYYY-MM-DD).",
+        description = "Follow a flight you are not on (code + local departure date YYYY-MM-DD); dry_run=true only looks it up.",
         annotations(
             read_only_hint = false,
             destructive_hint = false,

@@ -5,6 +5,7 @@ pub mod about;
 pub mod connections;
 pub mod flights;
 pub mod friends;
+pub mod ics;
 pub mod reference;
 pub mod stats;
 pub mod status;
