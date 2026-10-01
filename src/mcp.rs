@@ -1,4 +1,4 @@
-//! `flighty mcp`: stdio MCP server. Each tool = one `ops::*` call. stdout is JSON-RPC only.
+//! `flightydeck mcp`: stdio MCP server. Each tool = one `ops::*` call. stdout is JSON-RPC only.
 
 use rmcp::handler::server::{router::tool::ToolRouter, wrapper::Parameters};
 use rmcp::model::{CallToolResult, ContentBlock, Implementation, ServerCapabilities, ServerConfig};
@@ -20,9 +20,9 @@ read-only mode (FLIGHTY_READ_ONLY=1); remove exists only with FLIGHTY_ALLOW_REMO
 Times are given as utc, local and tz.";
 
 /// Tools that change the account. Registered only if `ctx.allows(Class::Write)`.
-const WRITE_TOOLS: &[&str] = &["flighty_add_flight", "flighty_follow_flight"];
+const WRITE_TOOLS: &[&str] = &["flightydeck_add_flight", "flightydeck_follow_flight"];
 /// Registered only if `ctx.allows(Class::Destructive)`.
-const DESTRUCTIVE_TOOLS: &[&str] = &["flighty_remove_flight"];
+const DESTRUCTIVE_TOOLS: &[&str] = &["flightydeck_remove_flight"];
 
 /// The same `{"error":{"kind","message"}}` body the CLI prints in `-o json` mode.
 pub fn error_json(e: &Error) -> serde_json::Value {
@@ -79,7 +79,7 @@ type ToolResult = Result<CallToolResult, ErrorData>;
 #[tool_router]
 impl FlightyServer {
     #[tool(
-        name = "flighty_list_flights",
+        name = "flightydeck_list_flights",
         description = "List the owner's flights (newest first). Filters: upcoming, past, include_archived, include_following, limit.",
         annotations(read_only_hint = true)
     )]
@@ -88,7 +88,7 @@ impl FlightyServer {
     }
 
     #[tool(
-        name = "flighty_get_flight",
+        name = "flightydeck_get_flight",
         description = "One flight by code (e.g. \"QR111\") or Flighty UUID; optional local departure date YYYY-MM-DD.",
         annotations(read_only_hint = true)
     )]
@@ -97,7 +97,7 @@ impl FlightyServer {
     }
 
     #[tool(
-        name = "flighty_search_flights",
+        name = "flightydeck_search_flights",
         description = "Search the owner's flights by free text, from/to airport, airline and date range.",
         annotations(read_only_hint = true)
     )]
@@ -106,7 +106,7 @@ impl FlightyServer {
     }
 
     #[tool(
-        name = "flighty_current_flights",
+        name = "flightydeck_current_flights",
         description = "Flights in the air now, departing soon, or just landed.",
         annotations(read_only_hint = true)
     )]
@@ -115,7 +115,7 @@ impl FlightyServer {
     }
 
     #[tool(
-        name = "flighty_get_flight_status",
+        name = "flightydeck_get_flight_status",
         description = "Status of one flight from the local database: phase, delays, gates, times.",
         annotations(read_only_hint = true)
     )]
@@ -124,7 +124,7 @@ impl FlightyServer {
     }
 
     #[tool(
-        name = "flighty_get_delay_forecast",
+        name = "flightydeck_get_delay_forecast",
         description = "Delay forecast for a flight code from past flights of the same code stored locally.",
         annotations(read_only_hint = true)
     )]
@@ -133,7 +133,7 @@ impl FlightyServer {
     }
 
     #[tool(
-        name = "flighty_list_friend_flights",
+        name = "flightydeck_list_friend_flights",
         description = "Flights of connected Flighty friends, optionally filtered by friend name.",
         annotations(read_only_hint = true)
     )]
@@ -142,7 +142,7 @@ impl FlightyServer {
     }
 
     #[tool(
-        name = "flighty_get_flight_stats",
+        name = "flightydeck_get_flight_stats",
         description = "Lifetime or per-year statistics of the owner's own flights.",
         annotations(read_only_hint = true)
     )]
@@ -151,7 +151,7 @@ impl FlightyServer {
     }
 
     #[tool(
-        name = "flighty_get_connections",
+        name = "flightydeck_get_connections",
         description = "Connections (layovers) between the owner's flights, with layover time and risk.",
         annotations(read_only_hint = true)
     )]
@@ -160,7 +160,7 @@ impl FlightyServer {
     }
 
     #[tool(
-        name = "flighty_search_airports",
+        name = "flightydeck_search_airports",
         description = "Find airports by name, city, IATA or ICAO code (accent-insensitive).",
         annotations(read_only_hint = true)
     )]
@@ -169,7 +169,7 @@ impl FlightyServer {
     }
 
     #[tool(
-        name = "flighty_search_airlines",
+        name = "flightydeck_search_airlines",
         description = "Find airlines by name, IATA or ICAO code.",
         annotations(read_only_hint = true)
     )]
@@ -178,7 +178,7 @@ impl FlightyServer {
     }
 
     #[tool(
-        name = "flighty_about",
+        name = "flightydeck_about",
         description = "Version, mode (read-only or read-write), and whether the Flighty database and sign-in were found.",
         annotations(read_only_hint = true)
     )]
@@ -187,7 +187,7 @@ impl FlightyServer {
     }
 
     #[tool(
-        name = "flighty_add_flight",
+        name = "flightydeck_add_flight",
         description = "Add a flight you are flying to your Flighty account (code + local departure date YYYY-MM-DD).",
         annotations(
             read_only_hint = false,
@@ -200,7 +200,7 @@ impl FlightyServer {
     }
 
     #[tool(
-        name = "flighty_follow_flight",
+        name = "flightydeck_follow_flight",
         description = "Follow a flight you are not on (code + local departure date YYYY-MM-DD).",
         annotations(
             read_only_hint = false,
@@ -213,7 +213,7 @@ impl FlightyServer {
     }
 
     #[tool(
-        name = "flighty_remove_flight",
+        name = "flightydeck_remove_flight",
         description = "EXPERIMENTAL: remove a flight from your Flighty account by UUID. Requires yes=true. Cannot be undone.",
         annotations(
             read_only_hint = false,

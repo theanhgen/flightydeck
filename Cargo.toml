@@ -10,7 +10,7 @@ keywords = ["flighty", "flights", "mcp", "cli"]
 categories = ["command-line-utilities"]
 
 [[bin]]
-name = "flighty"
+name = "flightydeck"
 path = "src/main.rs"
 
 [dependencies]

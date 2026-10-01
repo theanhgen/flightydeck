@@ -1,4 +1,4 @@
-//! End-to-end tests of the `flighty` binary: help, exit codes, JSON errors.
+//! End-to-end tests of the `flightydeck` binary: help, exit codes, JSON errors.
 
 mod common;
 
@@ -25,8 +25,8 @@ const SUBCOMMANDS: &[&str] = &[
 ];
 
 /// The binary with a clean policy environment and the DB pointed at `db`. stdin is never a TTY.
-fn flighty(db: &Path) -> Command {
-    let mut c = Command::new(env!("CARGO_BIN_EXE_flighty"));
+fn flightydeck(db: &Path) -> Command {
+    let mut c = Command::new(env!("CARGO_BIN_EXE_flightydeck"));
     c.env("FLIGHTY_DB", db)
         .env("FLIGHTY_APP_PLIST", "/nonexistent/Info.plist")
         .env_remove("FLIGHTY_READ_ONLY")
@@ -37,7 +37,7 @@ fn flighty(db: &Path) -> Command {
 }
 
 fn run(cmd: &mut Command) -> Output {
-    cmd.output().expect("run flighty")
+    cmd.output().expect("run flightydeck")
 }
 
 fn json(out: &Output) -> serde_json::Value {
@@ -55,12 +55,12 @@ fn missing_db() -> std::path::PathBuf {
 
 #[test]
 fn help_works_for_every_subcommand() {
-    let out = run(flighty(&missing_db()).arg("--help"));
+    let out = run(flightydeck(&missing_db()).arg("--help"));
     assert!(out.status.success());
     let top = String::from_utf8_lossy(&out.stdout);
     for sub in SUBCOMMANDS {
         assert!(top.contains(sub), "top-level help lists {sub}");
-        let out = run(flighty(&missing_db()).args([sub, "--help"]));
+        let out = run(flightydeck(&missing_db()).args([sub, "--help"]));
         assert!(
             out.status.success(),
             "{sub} --help: {}",
@@ -73,7 +73,7 @@ fn help_works_for_every_subcommand() {
 #[test]
 fn long_help_has_examples() {
     for sub in ["add", "get", "remove"] {
-        let out = run(flighty(&missing_db()).args([sub, "--help"]));
+        let out = run(flightydeck(&missing_db()).args([sub, "--help"]));
         assert!(
             String::from_utf8_lossy(&out.stdout).contains("Examples:"),
             "{sub}"
@@ -83,20 +83,20 @@ fn long_help_has_examples() {
 
 #[test]
 fn version_flag() {
-    let out = run(flighty(&missing_db()).arg("--version"));
+    let out = run(flightydeck(&missing_db()).arg("--version"));
     assert!(out.status.success());
     assert!(String::from_utf8_lossy(&out.stdout).contains(env!("CARGO_PKG_VERSION")));
 }
 
 #[test]
 fn unknown_subcommand_is_usage_error() {
-    let out = run(flighty(&missing_db()).arg("nope"));
+    let out = run(flightydeck(&missing_db()).arg("nope"));
     assert_eq!(out.status.code(), Some(2));
 }
 
 #[test]
 fn remove_is_refused_without_opt_in() {
-    let out = run(flighty(&missing_db()).args([
+    let out = run(flightydeck(&missing_db()).args([
         "remove",
         "e0000000-0000-4000-8000-000000000001",
         "--yes",
@@ -107,7 +107,7 @@ fn remove_is_refused_without_opt_in() {
 
 #[test]
 fn read_only_refuses_remove_even_when_allowed() {
-    let out = run(flighty(&missing_db())
+    let out = run(flightydeck(&missing_db())
         .env("FLIGHTY_READ_ONLY", "1")
         .env("FLIGHTY_ALLOW_REMOVE", "1")
         .args(["remove", "e0000000-0000-4000-8000-000000000001", "--yes"]));
@@ -117,7 +117,7 @@ fn read_only_refuses_remove_even_when_allowed() {
 
 #[test]
 fn remove_without_yes_off_tty_is_refused_with_json_error() {
-    let out = run(flighty(&missing_db())
+    let out = run(flightydeck(&missing_db())
         .env("FLIGHTY_ALLOW_REMOVE", "1")
         .args([
             "-o",
@@ -134,14 +134,14 @@ fn remove_without_yes_off_tty_is_refused_with_json_error() {
 
 #[test]
 fn list_without_db_is_not_ready() {
-    let out = run(flighty(&missing_db()).args(["-o", "json", "list"]));
+    let out = run(flightydeck(&missing_db()).args(["-o", "json", "list"]));
     assert_eq!(out.status.code(), Some(3));
     assert_eq!(json(&out)["error"]["kind"], "not_ready");
 }
 
 #[test]
 fn about_without_db_reports_it() {
-    let out = run(flighty(&missing_db()).args(["-o", "json", "about"]));
+    let out = run(flightydeck(&missing_db()).args(["-o", "json", "about"]));
     assert!(
         out.status.success(),
         "{}",
@@ -155,7 +155,7 @@ fn about_without_db_reports_it() {
 #[test]
 fn about_reports_read_only_mode() {
     let fx = common::fixture();
-    let out = run(flighty(&fx.db)
+    let out = run(flightydeck(&fx.db)
         .env("FLIGHTY_READ_ONLY", "1")
         .args(["-o", "json", "about"]));
     assert!(out.status.success());
@@ -167,7 +167,7 @@ fn about_reports_read_only_mode() {
 #[test]
 fn list_on_fixture_returns_flights_json() {
     let fx = common::fixture();
-    let out = run(flighty(&fx.db).args(["-o", "json", "list"]));
+    let out = run(flightydeck(&fx.db).args(["-o", "json", "list"]));
     assert!(
         out.status.success(),
         "{}",
@@ -183,7 +183,7 @@ fn list_on_fixture_returns_flights_json() {
 #[test]
 fn list_on_fixture_prints_table() {
     let fx = common::fixture();
-    let out = run(flighty(&fx.db).arg("list"));
+    let out = run(flightydeck(&fx.db).arg("list"));
     assert!(
         out.status.success(),
         "{}",
@@ -199,7 +199,7 @@ fn list_on_fixture_prints_table() {
 #[test]
 fn add_with_bad_date_is_bad_input() {
     let fx = common::fixture();
-    let out = run(flighty(&fx.db).args(["-o", "json", "add", "VN333", "2026-13-45"]));
+    let out = run(flightydeck(&fx.db).args(["-o", "json", "add", "VN333", "2026-13-45"]));
     assert_eq!(out.status.code(), Some(2));
     assert_eq!(json(&out)["error"]["kind"], "bad_input");
 }
@@ -208,7 +208,7 @@ fn add_with_bad_date_is_bad_input() {
 fn add_in_read_only_mode_is_refused() {
     let fx = common::fixture();
     let out =
-        run(flighty(&fx.db)
+        run(flightydeck(&fx.db)
             .env("FLIGHTY_READ_ONLY", "1")
             .args(["add", "VN333", "2026-10-14"]));
     assert_eq!(out.status.code(), Some(5));
@@ -218,9 +218,10 @@ fn add_in_read_only_mode_is_refused() {
 #[test]
 fn follow_in_read_only_mode_is_refused() {
     let fx = common::fixture();
-    let out =
-        run(flighty(&fx.db)
-            .env("FLIGHTY_READ_ONLY", "1")
-            .args(["follow", "VN333", "2026-10-14"]));
+    let out = run(flightydeck(&fx.db).env("FLIGHTY_READ_ONLY", "1").args([
+        "follow",
+        "VN333",
+        "2026-10-14",
+    ]));
     assert_eq!(out.status.code(), Some(5));
 }

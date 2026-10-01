@@ -43,7 +43,7 @@
         <p class="eyebrow"><span class="dot" aria-hidden="true"></span> Unofficial · macOS · single binary</p>
         <h1>Your flights.<br><span class="grad">Now in the terminal.</span></h1>
         <p class="lede">
-          <code>flighty</code> reads the flights you already track in the Flighty Mac app,
+          <code>flightydeck</code> reads the flights you already track in the Flighty Mac app,
           straight from its local database, and adds or follows new ones through the same API
           the app uses. One command line for you, one MCP server for your AI agent.
         </p>
@@ -71,21 +71,21 @@
           <h2>Plain tables for you. JSON for everything else.</h2>
         </div>
         <div class="term" aria-label="Example terminal session">
-          <div class="term-bar" aria-hidden="true"><i></i><i></i><i></i><span>zsh — flighty</span></div>
-<pre class="term-body"><code><span class="p">$</span> flighty list --upcoming
+          <div class="term-bar" aria-hidden="true"><i></i><i></i><i></i><span>zsh — flightydeck</span></div>
+<pre class="term-body"><code><span class="p">$</span> flightydeck list --upcoming
 <span class="h">DATE        FLIGHT  ROUTE      DEPARTS          ARRIVES          STATUS</span>
 2031-03-14  QR111   PRG → DOH  22:10 <span class="m">+01</span>        05:45 <span class="m">+03</span> <span class="m">+1d</span>  <span class="ok">on time</span>
 2031-03-18  VN333   HAN → SGN  14:05 <span class="m">+07</span>        16:15 <span class="m">+07</span>      <span class="warn">+25 min</span>
 2031-04-02  LX1486  PRG → ZRH  07:25 <span class="m">+02</span>        08:40 <span class="m">+02</span>      <span class="m">scheduled</span>
 
-<span class="p">$</span> flighty status VN333
+<span class="p">$</span> flightydeck status VN333
 VN333  Hanoi (HAN) → Ho Chi Minh City (SGN)   Wed 18 Mar 2031
            scheduled   estimated   actual   gate   terminal
 departs    14:05       14:30       —        22     T1
 arrives    16:15       16:40       —        —      T1   belt 7
 <span class="warn">delayed 25 min</span> · times are local to each airport
 
-<span class="p">$</span> flighty search --to zurich -o json | jq '.[0].departure.scheduled'
+<span class="p">$</span> flightydeck search --to zurich -o json | jq '.[0].departure.scheduled'
 {
   <span class="k">"utc"</span>: <span class="s">"2031-04-02T05:25:00Z"</span>,
   <span class="k">"local"</span>: <span class="s">"2031-04-02T07:25:00+02:00"</span>,
@@ -121,7 +121,7 @@ arrives    16:15       16:40       —        —      T1   belt 7
           </article>
           <article class="card">
             <h3>Add and follow flights</h3>
-            <p><code>flighty add QR111 2031-03-14</code> adds a flight you're on; <code>follow</code> tracks someone else's. They show up on your phone like any other.</p>
+            <p><code>flightydeck add QR111 2031-03-14</code> adds a flight you're on; <code>follow</code> tracks someone else's. They show up on your phone like any other.</p>
           </article>
           <article class="card">
             <h3>Stats, delays, connections</h3>
@@ -129,7 +129,7 @@ arrives    16:15       16:40       —        —      T1   belt 7
           </article>
           <article class="card">
             <h3>An MCP server included</h3>
-            <p><code>flighty mcp</code> exposes the same functions as tools to Claude and other MCP clients. Same code path as the CLI, same safety rules.</p>
+            <p><code>flightydeck mcp</code> exposes the same functions as tools to Claude and other MCP clients. Same code path as the CLI, same safety rules.</p>
           </article>
           <article class="card">
             <h3>One static binary</h3>
@@ -162,8 +162,8 @@ arrives    16:15       16:40       —        —      T1   belt 7
             <div>
               <h3>Check it can see Flighty</h3>
               <div class="copy">
-                <code>flighty about</code>
-                <button type="button" data-copy="flighty about">Copy</button>
+                <code>flightydeck about</code>
+                <button type="button" data-copy="flightydeck about">Copy</button>
               </div>
             </div>
           </li>
@@ -172,8 +172,8 @@ arrives    16:15       16:40       —        —      T1   belt 7
             <div>
               <h3>List what's coming up</h3>
               <div class="copy">
-                <code>flighty list --upcoming</code>
-                <button type="button" data-copy="flighty list --upcoming">Copy</button>
+                <code>flightydeck list --upcoming</code>
+                <button type="button" data-copy="flightydeck list --upcoming">Copy</button>
               </div>
             </div>
           </li>
@@ -186,29 +186,29 @@ arrives    16:15       16:40       —        —      T1   belt 7
         <div>
           <p class="kicker">MCP</p>
           <h2>Give your agent a window seat.</h2>
-          <p>Register the built-in MCP server with Claude Code, or point any MCP client at <code>flighty mcp</code> over stdio.</p>
+          <p>Register the built-in MCP server with Claude Code, or point any MCP client at <code>flightydeck mcp</code> over stdio.</p>
           <div class="copy">
-            <code>claude mcp add flighty -- flighty mcp</code>
-            <button type="button" data-copy="claude mcp add flighty -- flighty mcp">Copy</button>
+            <code>claude mcp add flightydeck -- flightydeck mcp</code>
+            <button type="button" data-copy="claude mcp add flightydeck -- flightydeck mcp">Copy</button>
           </div>
-          <p class="small">Prefer fewer tools in context? The repo ships an agent skill (<code>skills/flighty/SKILL.md</code>) that teaches agents to use the CLI with <code>-o json</code> instead.</p>
+          <p class="small">Prefer fewer tools in context? The repo ships an agent skill (<code>skills/flightydeck/SKILL.md</code>) that teaches agents to use the CLI with <code>-o json</code> instead.</p>
         </div>
         <ul class="tools" aria-label="MCP tools">
-          <li>flighty_list_flights</li>
-          <li>flighty_get_flight</li>
-          <li>flighty_search_flights</li>
-          <li>flighty_current_flights</li>
-          <li>flighty_get_flight_status</li>
-          <li>flighty_get_delay_forecast</li>
-          <li>flighty_list_friend_flights</li>
-          <li>flighty_get_flight_stats</li>
-          <li>flighty_get_connections</li>
-          <li>flighty_search_airports</li>
-          <li>flighty_search_airlines</li>
-          <li>flighty_about</li>
-          <li class="w">flighty_add_flight</li>
-          <li class="w">flighty_follow_flight</li>
-          <li class="d">flighty_remove_flight</li>
+          <li>flightydeck_list_flights</li>
+          <li>flightydeck_get_flight</li>
+          <li>flightydeck_search_flights</li>
+          <li>flightydeck_current_flights</li>
+          <li>flightydeck_get_flight_status</li>
+          <li>flightydeck_get_delay_forecast</li>
+          <li>flightydeck_list_friend_flights</li>
+          <li>flightydeck_get_flight_stats</li>
+          <li>flightydeck_get_connections</li>
+          <li>flightydeck_search_airports</li>
+          <li>flightydeck_search_airlines</li>
+          <li>flightydeck_about</li>
+          <li class="w">flightydeck_add_flight</li>
+          <li class="w">flightydeck_follow_flight</li>
+          <li class="d">flightydeck_remove_flight</li>
         </ul>
       </div>
     </section>

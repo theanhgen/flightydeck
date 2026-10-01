@@ -1,4 +1,4 @@
-//! `flighty` CLI. Parses args, calls `flightydeck::ops`, renders, maps errors to exit codes.
+//! `flightydeck` CLI. Parses args, calls `flightydeck::ops`, renders, maps errors to exit codes.
 
 use std::io::{BufRead, IsTerminal, Write};
 
@@ -16,7 +16,7 @@ use flightydeck::{Error, Result};
 /// Unofficial CLI for your Flighty flights (macOS). Not affiliated with Flighty.
 #[derive(Debug, Parser)]
 #[command(
-    name = "flighty",
+    name = "flightydeck",
     version,
     long_about = "Unofficial CLI for your Flighty flights (macOS). Not affiliated with Flighty.\n\n\
         Reads come from the Flighty app's local database; add/follow/remove go through Flighty's API.\n\
@@ -38,8 +38,8 @@ enum Cmd {
     List(ListArgs),
     /// Show one flight by code or UUID.
     #[command(long_about = "Show one flight by code or Flighty UUID.\n\n\
-        Examples:\n  flighty get QR111\n  flighty get \"VN 333\" --date 2026-10-14\n  \
-        flighty -o json get 3f2c9a1e-0000-4000-8000-000000000000")]
+        Examples:\n  flightydeck get QR111\n  flightydeck get \"VN 333\" --date 2026-10-14\n  \
+        flightydeck -o json get 3f2c9a1e-0000-4000-8000-000000000000")]
     Get(GetArgs),
     /// Search your flights by text, airports, airline or dates.
     Search(SearchArgs),
@@ -65,7 +65,7 @@ enum Cmd {
         long_about = "Add a flight you are flying to your Flighty account.\n\n\
         The date is the local departure date at the origin airport. Refused in read-only mode \
         (FLIGHTY_READ_ONLY=1). If the flight already looks tracked, nothing is sent unless --force.\n\n\
-        Examples:\n  flighty add VN333 2026-10-14\n  flighty add \"QR 111\" 2026-11-02 --force"
+        Examples:\n  flightydeck add VN333 2026-10-14\n  flightydeck add \"QR 111\" 2026-11-02 --force"
     )]
     Add(AddArgs),
     /// Follow a flight you are not on.
@@ -75,8 +75,8 @@ enum Cmd {
         long_about = "EXPERIMENTAL: remove a flight from your Flighty account. Cannot be undone.\n\n\
         Needs FLIGHTY_ALLOW_REMOVE=1 and is refused in read-only mode. Asks for confirmation on a \
         terminal; when stdin is not a terminal, --yes is required.\n\n\
-        Examples:\n  FLIGHTY_ALLOW_REMOVE=1 flighty remove 3f2c9a1e-0000-4000-8000-000000000000\n  \
-        FLIGHTY_ALLOW_REMOVE=1 flighty remove 3f2c9a1e-0000-4000-8000-000000000000 --yes"
+        Examples:\n  FLIGHTY_ALLOW_REMOVE=1 flightydeck remove 3f2c9a1e-0000-4000-8000-000000000000\n  \
+        FLIGHTY_ALLOW_REMOVE=1 flightydeck remove 3f2c9a1e-0000-4000-8000-000000000000 --yes"
     )]
     Remove(RemoveArgs),
     /// Version, mode, and whether the Flighty database and sign-in were found.

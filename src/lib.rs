@@ -1,7 +1,7 @@
 //! flightydeck: read your Flighty flights and add flights to your account.
 //! Unofficial; not made by or affiliated with Flighty.
 //!
-//! Both front-ends (`flighty` CLI and `flighty mcp`) call only `ops::*`.
+//! Both front-ends (`flightydeck` CLI and `flightydeck mcp`) call only `ops::*`.
 
 pub mod api;
 pub mod creds;

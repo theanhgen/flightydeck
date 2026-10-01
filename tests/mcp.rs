@@ -1,4 +1,4 @@
-//! `flighty mcp` over stdio JSON-RPC: tool registration per policy, tool call output.
+//! `flightydeck mcp` over stdio JSON-RPC: tool registration per policy, tool call output.
 
 mod common;
 
@@ -12,23 +12,23 @@ use std::time::Duration;
 use serde_json::{Value, json};
 
 const READ_TOOLS: &[&str] = &[
-    "flighty_list_flights",
-    "flighty_get_flight",
-    "flighty_search_flights",
-    "flighty_current_flights",
-    "flighty_get_flight_status",
-    "flighty_get_delay_forecast",
-    "flighty_list_friend_flights",
-    "flighty_get_flight_stats",
-    "flighty_get_connections",
-    "flighty_search_airports",
-    "flighty_search_airlines",
-    "flighty_about",
+    "flightydeck_list_flights",
+    "flightydeck_get_flight",
+    "flightydeck_search_flights",
+    "flightydeck_current_flights",
+    "flightydeck_get_flight_status",
+    "flightydeck_get_delay_forecast",
+    "flightydeck_list_friend_flights",
+    "flightydeck_get_flight_stats",
+    "flightydeck_get_connections",
+    "flightydeck_search_airports",
+    "flightydeck_search_airlines",
+    "flightydeck_about",
 ];
-const WRITE_TOOLS: &[&str] = &["flighty_add_flight", "flighty_follow_flight"];
-const REMOVE_TOOL: &str = "flighty_remove_flight";
+const WRITE_TOOLS: &[&str] = &["flightydeck_add_flight", "flightydeck_follow_flight"];
+const REMOVE_TOOL: &str = "flightydeck_remove_flight";
 
-/// A running `flighty mcp` with an initialized session.
+/// A running `flightydeck mcp` with an initialized session.
 struct Server {
     child: Child,
     stdin: ChildStdin,
@@ -38,7 +38,7 @@ struct Server {
 
 impl Server {
     fn start(db: &Path, env: &[(&str, &str)]) -> Server {
-        let mut cmd = Command::new(env!("CARGO_BIN_EXE_flighty"));
+        let mut cmd = Command::new(env!("CARGO_BIN_EXE_flightydeck"));
         cmd.arg("mcp")
             .env("FLIGHTY_DB", db)
             .env("FLIGHTY_APP_PLIST", "/nonexistent/Info.plist")
@@ -51,7 +51,7 @@ impl Server {
         for (k, v) in env {
             cmd.env(k, v);
         }
-        let mut child = cmd.spawn().expect("spawn flighty mcp");
+        let mut child = cmd.spawn().expect("spawn flightydeck mcp");
         let stdin = child.stdin.take().unwrap();
         let stdout = child.stdout.take().unwrap();
         let (tx, lines) = channel();
@@ -205,7 +205,7 @@ fn unregistered_tool_is_not_callable() {
     let mut s = Server::start(&fx.db, &[("FLIGHTY_READ_ONLY", "1")]);
     let res = s.request(
         "tools/call",
-        json!({ "name": "flighty_add_flight", "arguments": { "flight": "VN333", "date": "2026-10-14" } }),
+        json!({ "name": "flightydeck_add_flight", "arguments": { "flight": "VN333", "date": "2026-10-14" } }),
     );
     let refused = res.get("error").is_some() || res["result"]["isError"] == json!(true);
     assert!(refused, "{res}");
@@ -215,7 +215,7 @@ fn unregistered_tool_is_not_callable() {
 fn about_tool_returns_the_about_json() {
     let fx = common::fixture();
     let mut s = Server::start(&fx.db, &[("FLIGHTY_READ_ONLY", "1")]);
-    let (is_error, out) = s.call("flighty_about", json!({}));
+    let (is_error, out) = s.call("flightydeck_about", json!({}));
     assert!(!is_error, "{out}");
     assert_eq!(out["mode"], "read-only");
     assert_eq!(out["db_found"], true);
@@ -225,7 +225,7 @@ fn about_tool_returns_the_about_json() {
 fn list_tool_matches_cli_json_shape() {
     let fx = common::fixture();
     let mut s = Server::start(&fx.db, &[]);
-    let (is_error, out) = s.call("flighty_list_flights", json!({}));
+    let (is_error, out) = s.call("flightydeck_list_flights", json!({}));
     assert!(!is_error, "{out}");
     assert_eq!(out["owner_user_id"], common::OWNER);
     assert!(!out["flights"].as_array().unwrap().is_empty());
@@ -237,7 +237,7 @@ fn op_errors_are_tool_errors_with_kind() {
         Path::new("/nonexistent/flightydeck-test/MainFlightyDatabase.db"),
         &[],
     );
-    let (is_error, out) = s.call("flighty_list_flights", json!({}));
+    let (is_error, out) = s.call("flightydeck_list_flights", json!({}));
     assert!(is_error);
     assert_eq!(out["error"]["kind"], "not_ready");
 }

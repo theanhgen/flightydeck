@@ -28,7 +28,7 @@ pub struct AddArgs {
 
 #[derive(Debug, Clone, Deserialize, JsonSchema, clap::Args)]
 pub struct RemoveArgs {
-    /// Flighty flight UUID (from `flighty get`).
+    /// Flighty flight UUID (from `flightydeck get`).
     pub id: String,
     /// Confirm the removal (required when not on a TTY / always via MCP).
     #[arg(long)]
@@ -307,7 +307,7 @@ pub fn remove(ctx: &Ctx, a: &RemoveArgs) -> Result<WriteResult> {
 fn check_remove(ctx: &Ctx, a: &RemoveArgs) -> Result<()> {
     if !proto::is_uuid(a.id.trim()) {
         return Err(Error::BadInput(format!(
-            "invalid flight id {:?}: expected a Flighty flight UUID (see `flighty get`)",
+            "invalid flight id {:?}: expected a Flighty flight UUID (see `flightydeck get`)",
             a.id
         )));
     }

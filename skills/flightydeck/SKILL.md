@@ -1,11 +1,11 @@
 ---
-name: flighty
-description: Read and manage the user's flights from the Flighty macOS app with the `flighty` CLI. Use when the user asks about their flights, trips, upcoming or past flights, flight status, delays, gates, layovers, flight stats, friends' flights, airports or airlines, or wants to add or follow a flight in Flighty.
+name: flightydeck
+description: Read and manage the user's flights from the Flighty macOS app with the `flightydeck` CLI. Use when the user asks about their flights, trips, upcoming or past flights, flight status, delays, gates, layovers, flight stats, friends' flights, airports or airlines, or wants to add or follow a flight in Flighty.
 ---
 
-# flighty
+# flightydeck
 
-`flighty` is an unofficial CLI for the Flighty Mac app. Reads come from the app's local
+`flightydeck` is an unofficial CLI for the Flighty Mac app. Reads come from the app's local
 database; `add` and `follow` call Flighty's API. macOS only.
 
 ## Rules
@@ -15,7 +15,7 @@ database; `add` and `follow` call Flighty's API. macOS only.
 - **Confirm with the user before `add`, `follow` or `remove`.** Show the flight number, date and
   what will happen, and run it only after they agree.
 - **Never try to read the auth token**, from the database, the keychain or anywhere else, and
-  never query the Flighty database directly. `flighty about` says whether a token exists; that's
+  never query the Flighty database directly. `flightydeck about` says whether a token exists; that's
   all you need.
 - **Times are local to each airport.** Every timestamp in JSON is `{utc, local, tz}`. Quote
   `local` to the user and name the zone when it differs from theirs; use `utc` for arithmetic.
@@ -25,22 +25,22 @@ database; `add` and `follow` call Flighty's API. macOS only.
 
 | User wants | Command |
 |---|---|
-| Next flights | `flighty list --upcoming -o json` |
-| Flights in a year | `flighty list --year 2031 -o json` |
-| One flight, seat, booking | `flighty get QR111 --date 2031-03-14 -o json` |
-| Flights to/from somewhere | `flighty search --to zurich -o json` (accent-insensitive) |
-| What's in the air now | `flighty current -o json` |
-| Is it delayed, which gate | `flighty status VN333 -o json` |
-| How often is it late | `flighty delay VN333 -o json` |
-| Friends' flights | `flighty friends --upcoming -o json` |
-| Travel stats | `flighty stats --year 2031 -o json` |
-| Layovers | `flighty connections -o json` |
-| Airport or airline lookup | `flighty airports "ho chi minh" -o json`, `flighty airlines vietnam -o json` |
-| Add a flight they're on | `flighty add VN333 2031-03-18 -o json` after the user confirms |
-| Track someone else's flight | `flighty follow QR111 2031-03-14 -o json` after the user confirms |
-| Health check | `flighty about -o json` |
+| Next flights | `flightydeck list --upcoming -o json` |
+| Flights in a year | `flightydeck list --year 2031 -o json` |
+| One flight, seat, booking | `flightydeck get QR111 --date 2031-03-14 -o json` |
+| Flights to/from somewhere | `flightydeck search --to zurich -o json` (accent-insensitive) |
+| What's in the air now | `flightydeck current -o json` |
+| Is it delayed, which gate | `flightydeck status VN333 -o json` |
+| How often is it late | `flightydeck delay VN333 -o json` |
+| Friends' flights | `flightydeck friends --upcoming -o json` |
+| Travel stats | `flightydeck stats --year 2031 -o json` |
+| Layovers | `flightydeck connections -o json` |
+| Airport or airline lookup | `flightydeck airports "ho chi minh" -o json`, `flightydeck airlines vietnam -o json` |
+| Add a flight they're on | `flightydeck add VN333 2031-03-18 -o json` after the user confirms |
+| Track someone else's flight | `flightydeck follow QR111 2031-03-14 -o json` after the user confirms |
+| Health check | `flightydeck about -o json` |
 
-Run `flighty <command> --help` for all flags.
+Run `flightydeck <command> --help` for all flags.
 
 ## Exit codes
 

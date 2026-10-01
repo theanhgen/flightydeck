@@ -5,7 +5,7 @@
 > private API the app uses; both can change without notice, and using them may be subject to
 > Flighty's terms. Use it for your own account, at your own risk.
 
-A command-line tool (`flighty`) and an MCP server (`flighty mcp`) for the
+A command-line tool (`flightydeck`) and an MCP server (`flightydeck mcp`) for the
 [Flighty](https://flightyapp.com) macOS app. It reads the flights you already track in the app
 from its local database (read-only), and adds or follows new flights through the same API the
 app uses.
@@ -17,8 +17,8 @@ Website: <https://theanhgen.github.io/flightydeck/>
 Requirements: macOS, the Flighty Mac app installed and signed in, and a Rust toolchain.
 
 ```sh
-cargo install --git https://github.com/theanhgen/flightydeck   # installs the `flighty` binary
-flighty about                                                  # checks it can find Flighty
+cargo install --git https://github.com/theanhgen/flightydeck   # installs the `flightydeck` binary
+flightydeck about                                              # checks it can find Flighty
 ```
 
 It's a single static binary. No Node or Python runtime.
@@ -26,17 +26,17 @@ It's a single static binary. No Node or Python runtime.
 ## Quick start
 
 ```sh
-flighty list --upcoming              # your next flights
-flighty status QR111                 # schedule vs estimate vs actual, gate, terminal, belt
-flighty airports "con dao"           # accent-insensitive: finds Côn Đảo
-flighty stats --year 2031            # distance, time in the air, top routes
-flighty add VN333 2031-03-18         # add a flight you're on
-flighty list -o json | jq '.[0]'     # JSON for scripts and agents
+flightydeck list --upcoming              # your next flights
+flightydeck status QR111                 # schedule vs estimate vs actual, gate, terminal, belt
+flightydeck airports "con dao"           # accent-insensitive: finds Côn Đảo
+flightydeck stats --year 2031            # distance, time in the air, top routes
+flightydeck add VN333 2031-03-18         # add a flight you're on
+flightydeck list -o json | jq '.[0]'     # JSON for scripts and agents
 ```
 
 ## Commands
 
-Run `flighty <command> --help` for every flag.
+Run `flightydeck <command> --help` for every flag.
 
 | Command | What it does | Class |
 |---|---|---|
@@ -93,24 +93,24 @@ Search is accent- and case-insensitive (`con dao` finds Côn Đảo).
 ## MCP server
 
 ```sh
-claude mcp add flighty -- flighty mcp
+claude mcp add flightydeck -- flightydeck mcp
 ```
 
-Any MCP client that can launch a stdio server works the same way: the command is `flighty mcp`.
+Any MCP client that can launch a stdio server works the same way: the command is `flightydeck mcp`.
 
 | Tool | Class |
 |---|---|
-| `flighty_list_flights`, `flighty_get_flight`, `flighty_search_flights`, `flighty_current_flights` | read |
-| `flighty_get_flight_status`, `flighty_get_delay_forecast` | read |
-| `flighty_list_friend_flights`, `flighty_get_flight_stats`, `flighty_get_connections` | read |
-| `flighty_search_airports`, `flighty_search_airlines`, `flighty_about` | read |
-| `flighty_add_flight`, `flighty_follow_flight` | write (not registered when read-only) |
-| `flighty_remove_flight` | destructive (registered only with `FLIGHTY_ALLOW_REMOVE=1`) |
+| `flightydeck_list_flights`, `flightydeck_get_flight`, `flightydeck_search_flights`, `flightydeck_current_flights` | read |
+| `flightydeck_get_flight_status`, `flightydeck_get_delay_forecast` | read |
+| `flightydeck_list_friend_flights`, `flightydeck_get_flight_stats`, `flightydeck_get_connections` | read |
+| `flightydeck_search_airports`, `flightydeck_search_airlines`, `flightydeck_about` | read |
+| `flightydeck_add_flight`, `flightydeck_follow_flight` | write (not registered when read-only) |
+| `flightydeck_remove_flight` | destructive (registered only with `FLIGHTY_ALLOW_REMOVE=1`) |
 
 Every tool calls the same library function as the matching CLI command.
 
 If your agent can run shell commands, the CLI plus the bundled skill
-([`skills/flighty/SKILL.md`](skills/flighty/SKILL.md)) costs no context until it's used, unlike
+([`skills/flightydeck/SKILL.md`](skills/flightydeck/SKILL.md)) costs no context until it's used, unlike
 an MCP server whose tool schemas load into every session.
 
 ## Safety
