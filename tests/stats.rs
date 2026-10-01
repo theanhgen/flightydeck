@@ -21,26 +21,26 @@ fn lifetime_counts_own_flights_only() {
     assert_eq!(s.countries, 4);
     assert_eq!(s.airlines, 3);
     assert_eq!(s.aircraft_types, 1);
-    assert_eq!(s.top_routes.first(), Some(&("ZRH–PRG".to_string(), 2)));
-    assert_eq!(s.top_airports.first(), Some(&("PRG".to_string(), 5)));
+    assert_eq!(s.top_routes.first(), Some(&("DUS–LHR".to_string(), 2)));
+    assert_eq!(s.top_airports.first(), Some(&("LHR".to_string(), 5)));
     assert_eq!(
         s.top_airlines,
         vec![
-            ("Qatar Airways".to_string(), 3),
-            ("Swiss".to_string(), 3),
-            ("Vietnam Airlines".to_string(), 2)
+            ("Iberia".to_string(), 3),
+            ("Lufthansa".to_string(), 3),
+            ("Aeroméxico".to_string(), 2)
         ]
     );
-    // 22:10 UTC departure is 01:10 next day in Doha (local date).
+    // The date is local to the departure airport: 22:10 UTC is 23:10 in Madrid.
     assert_eq!(
         s.longest.as_deref(),
-        Some("QR222 DOH–HAN, 6380 km, 2031-03-18")
+        Some("IB222 MAD–MEX, 6380 km, 2031-03-17")
     );
 }
 
 #[test]
 fn round_trip_counts_each_country_once() {
-    // 2025: ZRH–PRG twice and PRG–ZRH once. Upstream counted 4 countries here.
+    // 2025: DUS–LHR twice and LHR–DUS once. Upstream counted 4 countries here.
     let s = run(Some(2025));
     assert_eq!(s.flights, 3);
     assert_eq!(s.countries, 2);
@@ -64,7 +64,7 @@ fn empty_year() {
 #[test]
 fn renders_table() {
     let t = run(None).table();
-    assert!(t.contains("All time") && t.contains("18130 km") && t.contains("ZRH–PRG"));
+    assert!(t.contains("All time") && t.contains("18130 km") && t.contains("DUS–LHR"));
 }
 
 #[test]

@@ -89,7 +89,7 @@ impl FlightyServer {
 
     #[tool(
         name = "flightydeck_get_flight",
-        description = "One flight by code (e.g. \"QR111\") or Flighty UUID; optional local departure date YYYY-MM-DD.",
+        description = "One flight by code (e.g. \"BA286\") or Flighty UUID; optional local departure date YYYY-MM-DD.",
         annotations(read_only_hint = true)
     )]
     async fn get_flight(&self, Parameters(a): Parameters<GetArgs>) -> ToolResult {

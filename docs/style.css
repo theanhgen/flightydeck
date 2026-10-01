@@ -20,7 +20,7 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 
-html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; overflow-x: clip; }
 
 body {
   margin: 0;
@@ -39,7 +39,9 @@ p code, li code, td code, summary code {
   border: 1px solid var(--line);
   border-radius: 6px;
   padding: .08em .38em;
-  white-space: nowrap;
+  /* Wrap rather than push the page wider than the screen. */
+  overflow-wrap: anywhere;
+  -webkit-box-decoration-break: clone; box-decoration-break: clone;
 }
 
 :focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; border-radius: 6px; }
@@ -117,7 +119,7 @@ h1 {
   background: linear-gradient(180deg, #121417, #0b0c0e);
   border: 1px solid var(--line);
   box-shadow: 0 30px 80px -30px rgba(0, 0, 0, .9), inset 0 1px 0 rgba(255, 255, 255, .05);
-  max-width: 100%;
+  width: fit-content; max-width: 100%;
   overflow: hidden;
 }
 .board-head, .board-row { display: flex; gap: calc(var(--cell) * .9); }
@@ -143,8 +145,12 @@ h1 {
 .flap::after {
   content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: rgba(0, 0, 0, .75);
 }
-.flap.tick { animation: flip .09s ease-out; }
-@keyframes flip { from { transform: scaleY(.55); filter: brightness(1.5); } to { transform: none; } }
+.flap { transition: color .4s ease; }
+.flap.tick { animation: flip .08s ease-out; }
+@keyframes flip {
+  from { transform: perspective(120px) rotateX(-70deg); filter: brightness(1.6); }
+  to { transform: none; }
+}
 [data-status="ok"] .f3 .flap { color: var(--green); }
 [data-status="warn"] .f3 .flap { color: var(--amber); }
 [data-status="info"] .f3 .flap { color: var(--blue); }
@@ -184,7 +190,7 @@ h3 { margin: 0 0 8px; font-size: 19px; letter-spacing: -.015em; line-height: 1.3
   font: 400 14px/1.65 var(--mono); color: #d8dce3;
   -webkit-overflow-scrolling: touch;
 }
-@media (max-width: 719px) { .term-body { font-size: 12px; padding: 16px; } }
+@media (max-width: 719px) { .term-body { font-size: 11.5px; padding: 16px; } }
 .term-body .p { color: var(--amber); }
 .term-body .h { color: var(--dim); }
 .term-body .m { color: var(--dim); }

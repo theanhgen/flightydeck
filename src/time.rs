@@ -4,7 +4,7 @@ use chrono::{DateTime, TimeZone, Utc};
 use chrono_tz::Tz;
 use serde::Serialize;
 
-/// `{ "utc": "2026-10-17T14:50:00Z", "local": "2026-10-17 16:50", "tz": "Europe/Prague" }`
+/// `{ "utc": "2031-07-04T14:50:00Z", "local": "2031-07-04 15:50", "tz": "Europe/London" }`
 #[derive(Debug, Clone, Serialize, PartialEq, Eq, schemars::JsonSchema)]
 pub struct Stamp {
     pub utc: String,
@@ -31,7 +31,7 @@ impl Stamp {
         unix.filter(|u| *u > 0).and_then(|u| Stamp::new(u, tz))
     }
 
-    /// Human form for tables: "Fri 23 Oct 11:00 +07".
+    /// Human form for tables: "Fri 04 Jul 2031 15:50 +01".
     pub fn human(&self) -> String {
         let Some(dt) = Utc.timestamp_opt(self.unix, 0).single() else {
             return self.utc.clone();
@@ -90,11 +90,11 @@ mod tests {
 
     #[test]
     fn local_time_in_airport_zone() {
-        // 2026-10-17 14:50 UTC = 16:50 Prague (CEST)
-        let s = Stamp::new(1_792_248_600, Some("Europe/Prague")).unwrap();
-        assert_eq!(s.utc, "2026-10-17T14:50:00Z");
-        assert_eq!(s.local.as_deref(), Some("2026-10-17 16:50"));
-        assert_eq!(s.tz.as_deref(), Some("Europe/Prague"));
+        // 2031-07-04 14:50 UTC = 15:50 London (BST)
+        let s = Stamp::new(1_940_943_000, Some("Europe/London")).unwrap();
+        assert_eq!(s.utc, "2031-07-04T14:50:00Z");
+        assert_eq!(s.local.as_deref(), Some("2031-07-04 15:50"));
+        assert_eq!(s.tz.as_deref(), Some("Europe/London"));
     }
 
     #[test]

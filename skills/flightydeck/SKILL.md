@@ -27,20 +27,20 @@ database; `add` and `follow` call Flighty's API. macOS only.
 |---|---|
 | Next flights | `flightydeck list --upcoming -o json` |
 | Flights in a year | `flightydeck list --year 2031 -o json` |
-| One flight, seat, booking | `flightydeck get QR111 --date 2031-03-14 -o json` |
-| Flights to/from somewhere | `flightydeck search --to zurich -o json` (accent-insensitive) |
+| One flight, seat, booking | `flightydeck get BA286 --date 2031-03-14 -o json` |
+| Flights to/from somewhere | `flightydeck search --to london -o json` (accent-insensitive) |
 | What's in the air now | `flightydeck current -o json` |
-| Is it delayed, which gate | `flightydeck status VN333 -o json` |
-| How often is it late | `flightydeck delay VN333 -o json` |
+| Is it delayed, which gate | `flightydeck status UA901 -o json` |
+| How often is it late | `flightydeck delay UA901 -o json` |
 | Friends' flights | `flightydeck friends --upcoming -o json` |
 | Travel stats | `flightydeck stats --year 2031 -o json` |
 | Layovers | `flightydeck connections -o json` |
-| Airport or airline lookup | `flightydeck airports "ho chi minh" -o json`, `flightydeck airlines vietnam -o json` |
+| Airport or airline lookup | `flightydeck airports "sao paulo" -o json`, `flightydeck airlines united -o json` |
 | More than 50 flights | `flightydeck list --past --limit 50 --offset 50 -o json` (default limit is 50) |
 | Flights as a calendar file | `flightydeck ics --upcoming > flights.ics` (no `-o json`; the output is the file) |
-| Check a flight exists before adding | `flightydeck add VN333 2031-03-18 --dry-run -o json` (looks it up, adds nothing) |
-| Add a flight they're on | `flightydeck add VN333 2031-03-18 -o json` after the user confirms |
-| Track someone else's flight | `flightydeck follow QR111 2031-03-14 -o json` after the user confirms |
+| Check a flight exists before adding | `flightydeck add UA901 2031-03-18 --dry-run -o json` (looks it up, adds nothing) |
+| Add a flight they're on | `flightydeck add UA901 2031-03-18 -o json` after the user confirms |
+| Track someone else's flight | `flightydeck follow BA286 2031-03-14 -o json` after the user confirms |
 | Health check | `flightydeck about -o json` |
 
 Run `flightydeck <command> --help` for all flags.

@@ -40,7 +40,7 @@ pub struct Flight {
     pub id: String,
     /// Entered by hand in the app (ManualFlight).
     pub manual: bool,
-    /// "QR111"
+    /// "BA286"
     pub flight_code: String,
     pub airline_iata: Option<String>,
     pub airline_name: Option<String>,

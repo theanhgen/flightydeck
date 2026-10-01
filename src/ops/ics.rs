@@ -13,7 +13,7 @@ use crate::time::{self, Stamp};
 
 #[derive(Debug, Clone, Default, Deserialize, JsonSchema, clap::Args)]
 pub struct IcsArgs {
-    /// Only this flight: code ("QR111") or Flighty UUID. Default: all your flights.
+    /// Only this flight: code ("BA286") or Flighty UUID. Default: all your flights.
     pub flight: Option<String>,
     /// With a flight code: departure date YYYY-MM-DD (local). Default: nearest to now.
     #[arg(long, requires = "flight")]
@@ -151,7 +151,7 @@ fn code(a: &AirportRef) -> String {
         .unwrap_or_else(|| "?".into())
 }
 
-/// "QR111 PRG → DOH"
+/// "BA286 SFO → LHR"
 fn summary(f: &Flight) -> String {
     let to = f.diverted_to.as_ref().unwrap_or(&f.to);
     let s = format!("{} {} → {}", f.flight_code, code(&f.from), code(to));
@@ -162,7 +162,7 @@ fn summary(f: &Flight) -> String {
     }
 }
 
-/// "Vaclav Havel Airport Prague (PRG), Terminal 1"
+/// "London Heathrow (LHR), Terminal 1"
 fn location(f: &Flight) -> Option<String> {
     let a = &f.from;
     let mut s = match (&a.name, &a.iata) {

@@ -206,7 +206,7 @@ fn unregistered_tool_is_not_callable() {
     let mut s = Server::start(&fx.db, &[("FLIGHTY_READ_ONLY", "1")]);
     let res = s.request(
         "tools/call",
-        json!({ "name": "flightydeck_add_flight", "arguments": { "flight": "VN333", "date": "2026-10-14" } }),
+        json!({ "name": "flightydeck_add_flight", "arguments": { "flight": "AM333", "date": "2031-03-14" } }),
     );
     let refused = res.get("error").is_some() || res["result"]["isError"] == json!(true);
     assert!(refused, "{res}");

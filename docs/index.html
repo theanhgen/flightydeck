@@ -52,14 +52,14 @@
           <a class="btn ghost" href="https://github.com/theanhgen/flightydeck">View on GitHub</a>
         </div>
 
-        <div class="board" role="img" aria-label="Departure board: QR111 to Doha on time, VN333 to Ho Chi Minh City delayed 25 minutes, LX1486 to Zurich boarding, OK652 to Paris cancelled.">
+        <div class="board" role="img" aria-label="Example departure board with invented flights, cycling through statuses such as on time, delayed, boarding and cancelled.">
           <div class="board-head" aria-hidden="true">
             <span>Flight</span><span>To</span><span>Time</span><span>Status</span>
           </div>
-          <div class="board-row" data-row="QR111 |DOHA     |22:10|ON TIME  " data-status="ok"></div>
-          <div class="board-row" data-row="VN333 |HCMC     |14:05|DELAY 25 " data-status="warn"></div>
-          <div class="board-row" data-row="LX1486|ZURICH   |07:25|BOARDING " data-status="info"></div>
-          <div class="board-row" data-row="OK652 |PARIS    |18:40|CANCELLED" data-status="bad"></div>
+          <div class="board-row"></div>
+          <div class="board-row"></div>
+          <div class="board-row"></div>
+          <div class="board-row"></div>
         </div>
       </div>
     </section>
@@ -73,23 +73,24 @@
         <div class="term" aria-label="Example terminal session">
           <div class="term-bar" aria-hidden="true"><i></i><i></i><i></i><span>zsh — flightydeck</span></div>
 <pre class="term-body"><code><span class="p">$</span> flightydeck list --upcoming
-<span class="h">DATE        FLIGHT  ROUTE      DEPARTS          ARRIVES          STATUS</span>
-2031-03-14  QR111   PRG → DOH  22:10 <span class="m">+01</span>        05:45 <span class="m">+03</span> <span class="m">+1d</span>  <span class="ok">on time</span>
-2031-03-18  VN333   HAN → SGN  14:05 <span class="m">+07</span>        16:15 <span class="m">+07</span>      <span class="warn">+25 min</span>
-2031-04-02  LX1486  PRG → ZRH  07:25 <span class="m">+02</span>        08:40 <span class="m">+02</span>      <span class="m">scheduled</span>
+<span class="h">DATE        FLIGHT  ROUTE      DEP    STATUS</span>
+2031-03-14  UA901   SFO → LHR  16:40  <span class="ok">on time</span>
+2031-03-18  BA1442  LHR → EDI  14:05  <span class="warn">+25 min</span>
+2031-04-02  UA902   LHR → SFO  11:25  <span class="m">scheduled</span>
 
-<span class="p">$</span> flightydeck status VN333
-VN333  Hanoi (HAN) → Ho Chi Minh City (SGN)   Wed 18 Mar 2031
-           scheduled   estimated   actual   gate   terminal
-departs    14:05       14:30       —        22     T1
-arrives    16:15       16:40       —        —      T1   belt 7
-<span class="warn">delayed 25 min</span> · times are local to each airport
+<span class="p">$</span> flightydeck status BA1442
+BA1442  London (LHR) → Edinburgh (EDI)
+          scheduled  estimated  gate
+departs   14:05      14:30      A22
+arrives   15:30      15:55      —
+<span class="warn">delayed 25 min</span> · local airport times
 
-<span class="p">$</span> flightydeck search --to zurich -o json | jq '.[0].departure.scheduled'
+<span class="p">$</span> flightydeck get UA901 -o json \
+    | jq .departure_scheduled
 {
-  <span class="k">"utc"</span>: <span class="s">"2031-04-02T05:25:00Z"</span>,
-  <span class="k">"local"</span>: <span class="s">"2031-04-02T07:25:00+02:00"</span>,
-  <span class="k">"tz"</span>: <span class="s">"Europe/Prague"</span>
+  <span class="k">"utc"</span>: <span class="s">"2031-03-14T23:40:00Z"</span>,
+  <span class="k">"local"</span>: <span class="s">"2031-03-14 16:40"</span>,
+  <span class="k">"tz"</span>: <span class="s">"America/Los_Angeles"</span>
 }</code></pre>
         </div>
         <p class="note">Example output with invented flights. Exact columns may differ between versions.</p>
@@ -113,7 +114,7 @@ arrives    16:15       16:40       —        —      T1   belt 7
           </article>
           <article class="card">
             <h3>Search the way you type</h3>
-            <p>Accent-insensitive matching on airports, cities and airlines: <code>con dao</code> finds Côn Đảo, <code>zurich</code> finds Zürich.</p>
+            <p>Accent-insensitive matching on airports, cities and airlines: <code>sao paulo</code> finds São Paulo, <code>malaga</code> finds Málaga.</p>
           </article>
           <article class="card">
             <h3>Built for scripts and agents</h3>
@@ -121,7 +122,7 @@ arrives    16:15       16:40       —        —      T1   belt 7
           </article>
           <article class="card">
             <h3>Add and follow flights</h3>
-            <p><code>flightydeck add QR111 2031-03-14</code> adds a flight you're on; <code>follow</code> tracks someone else's. They show up on your phone like any other.</p>
+            <p><code>flightydeck add UA901 2031-03-14</code> adds a flight you're on; <code>follow</code> tracks someone else's. They show up on your phone like any other.</p>
           </article>
           <article class="card">
             <h3>Stats, delays, connections</h3>
@@ -144,7 +145,7 @@ arrives    16:15       16:40       —        —      T1   belt 7
         <div class="section-head">
           <p class="kicker">Install</p>
           <h2>Ready before boarding.</h2>
-          <p>Needs macOS and the Flighty Mac app, installed and signed in. Or build from source with <code>cargo install --git https://github.com/theanhgen/flightydeck</code>.</p>
+          <p>Needs macOS and the Flighty Mac app, installed and signed in. To build from source instead, see the <a href="https://github.com/theanhgen/flightydeck#install">README</a>.</p>
         </div>
         <ol class="steps">
           <li>
@@ -322,33 +323,106 @@ arrives    16:15       16:40       —        —      T1   belt 7
       });
     });
 
-    // Split-flap board: build cells, then flip through letters unless motion is reduced.
+    // Split-flap board: every few seconds the rows flip, letter by letter, to the next set of
+    // flights. Static when motion is reduced; paused while the board is off screen or the tab hidden.
     (function () {
-      var CHARS = ' ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:+';
+      var CHARS = ' ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:';
+      var WIDTHS = [6, 9, 5, 9]; // flight, to, time, status
+      var BOARDS = [
+        [['UA901', 'LONDON', '13:20', 'BOARDING', 'info'],
+         ['AA100', 'NEW YORK', '14:05', 'ON TIME', 'ok'],
+         ['AS330', 'SEATTLE', '14:40', 'DELAY 25', 'warn'],
+         ['JL1', 'TOKYO', '15:10', 'CANCELLED', 'bad']],
+        [['UA901', 'LONDON', '13:20', 'DEPARTED', 'ok'],
+         ['AA100', 'NEW YORK', '14:05', 'GATE B12', 'info'],
+         ['AS330', 'SEATTLE', '15:05', 'BOARDING', 'info'],
+         ['DL410', 'BOSTON', '15:30', 'ON TIME', 'ok']],
+        [['AA100', 'NEW YORK', '14:05', 'LAST CALL', 'warn'],
+         ['AS330', 'SEATTLE', '15:05', 'DEPARTED', 'ok'],
+         ['DL410', 'BOSTON', '15:30', 'DELAY 40', 'warn'],
+         ['UA16', 'CHICAGO', '16:10', 'ON TIME', 'ok']],
+        [['DL410', 'BOSTON', '16:10', 'BOARDING', 'info'],
+         ['UA16', 'CHICAGO', '16:10', 'GATE F4', 'info'],
+         ['BA286', 'LONDON', '16:45', 'ON TIME', 'ok'],
+         ['AS12', 'HONOLULU', '17:20', 'CANCELLED', 'bad']]
+      ];
+      var board = document.querySelector('.board');
+      if (!board) return;
       var still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      document.querySelectorAll('.board-row').forEach(function (row, r) {
-        row.dataset.row.split('|').forEach(function (field, f) {
+      var rows = [].slice.call(board.querySelectorAll('.board-row'));
+
+      // One cell per character; `cells[r]` is the row's flat list of flaps.
+      var cells = rows.map(function (row) {
+        var flat = [];
+        WIDTHS.forEach(function (w, f) {
           var group = document.createElement('span');
           group.className = 'field f' + f;
           group.setAttribute('aria-hidden', 'true');
-          field.split('').forEach(function (ch, i) {
+          for (var i = 0; i < w; i++) {
             var cell = document.createElement('span');
             cell.className = 'flap';
-            cell.textContent = still ? ch : ' ';
+            cell.textContent = ' ';
             group.appendChild(cell);
-            if (still || ch === ' ') { cell.textContent = ch; return; }
-            var target = CHARS.indexOf(ch), n = 0, steps = 6 + ((i * 3 + r * 5) % 9);
-            var start = CHARS.length - steps + target;
-            var timer = setInterval(function () {
-              n++;
-              cell.textContent = CHARS[(start + n) % CHARS.length];
-              cell.classList.remove('tick'); void cell.offsetWidth; cell.classList.add('tick');
-              if (n >= steps) { clearInterval(timer); cell.textContent = ch; }
-            }, 55 + r * 6);
-          });
+            flat.push(cell);
+          }
           row.appendChild(group);
         });
+        return flat;
       });
+
+      function text(entry) {
+        return WIDTHS.map(function (w, f) { return (entry[f] + '         ').slice(0, w); }).join('');
+      }
+
+      // Steps a flap forward through the alphabet until it shows `ch`, like the real thing.
+      function flipTo(cell, ch, delay, done) {
+        clearTimeout(cell._t);
+        var target = CHARS.indexOf(ch);
+        if (target < 0) target = 0;
+        function step() {
+          var at = CHARS.indexOf(cell.textContent);
+          if (at === target) { done(); return; }
+          cell.textContent = CHARS[(at + 1) % CHARS.length];
+          cell.classList.remove('tick'); void cell.offsetWidth; cell.classList.add('tick');
+          cell._t = setTimeout(step, 42);
+        }
+        cell._t = setTimeout(step, delay);
+      }
+
+      function show(n, instant) {
+        BOARDS[n].forEach(function (entry, r) {
+          var chars = text(entry), row = rows[r];
+          if (instant) {
+            cells[r].forEach(function (cell, i) { cell.textContent = chars[i]; });
+            row.dataset.status = entry[4];
+            return;
+          }
+          // The status takes its colour once the row has settled.
+          var pending = cells[r].length, turn = (row._turn = (row._turn || 0) + 1);
+          if (cells[r].some(function (cell, i) { return cell.textContent !== chars[i]; })) row.dataset.status = '';
+          cells[r].forEach(function (cell, i) {
+            flipTo(cell, chars[i], r * 180 + i * 22, function () {
+              if (--pending === 0 && row._turn === turn) row.dataset.status = entry[4];
+            });
+          });
+        });
+      }
+
+      if (still) { show(0, true); return; }
+
+      var current = 0, visible = true, timer = null;
+      function next() { current = (current + 1) % BOARDS.length; show(current, false); }
+      function sync() {
+        var run = visible && !document.hidden;
+        if (run && !timer) timer = setInterval(next, 6500);
+        if (!run && timer) { clearInterval(timer); timer = null; }
+      }
+      show(0, false);
+      if ('IntersectionObserver' in window) {
+        new IntersectionObserver(function (e) { visible = e[0].isIntersecting; sync(); }).observe(board);
+      }
+      document.addEventListener('visibilitychange', sync);
+      sync();
     })();
   </script>
 </body>
