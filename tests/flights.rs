@@ -147,9 +147,9 @@ fn manual_flight_included_with_duration() {
     let list = flights::list(&fx.ctx(), &ListArgs::default()).unwrap();
     let m = list.flights.iter().find(|f| f.id == MANUAL).unwrap();
     assert!(m.manual);
-    assert_eq!(m.flight_code, "LX1480");
+    assert_eq!(m.flight_code, "LH1480");
     assert_eq!(m.duration_minutes, Some(75));
-    assert_eq!(m.from.iata.as_deref(), Some("PRG"));
+    assert_eq!(m.from.iata.as_deref(), Some("LHR"));
 }
 
 #[test]
@@ -158,26 +158,26 @@ fn flight_fields_and_ticket() {
     let f = flights::get(
         &fx.ctx(),
         &GetArgs {
-            flight: "qr 111".into(),
+            flight: "ib 111".into(),
             date: None,
         },
     )
     .unwrap();
     assert_eq!(f.id, fid(1));
-    assert_eq!(f.flight_code, "QR111");
-    assert_eq!(f.airline_name.as_deref(), Some("Qatar Airways"));
+    assert_eq!(f.flight_code, "IB111");
+    assert_eq!(f.airline_name.as_deref(), Some("Iberia"));
     assert_eq!(f.duration_minutes, Some(350));
     let dep = f.departure_scheduled.as_ref().unwrap();
     assert_eq!(dep.utc, "2031-03-17T14:50:00Z");
-    assert_eq!(dep.local.as_deref(), Some("2031-03-17 15:50"));
-    assert_eq!(f.to.tz.as_deref(), Some("Asia/Qatar"));
+    assert_eq!(dep.local.as_deref(), Some("2031-03-17 14:50"));
+    assert_eq!(f.to.tz.as_deref(), Some("Europe/Madrid"));
     let t = f.ticket.as_ref().unwrap();
     assert_eq!(
         (t.booking_reference.as_deref(), t.seat.as_deref()),
         (Some("TEST01"), Some("32A"))
     );
     let table = f.table();
-    assert!(table.contains("17 Mar 2031 15:50 +01"), "{table}");
+    assert!(table.contains("17 Mar 2031 14:50 +00"), "{table}");
     assert!(table.contains("5h 50m"), "{table}");
 }
 
@@ -194,27 +194,33 @@ fn get_nearest_and_by_date() {
             },
         )
     };
-    // Both LX1486 flights are past: default is the most recent (archived ones still count).
-    assert_eq!(get("LX1486", None).unwrap().id, fid(6));
-    assert_eq!(get("lx-1486", Some("2025-05-01")).unwrap().id, fid(5));
+    // Both LH1486 flights are past: default is the most recent (archived ones still count).
+    assert_eq!(get("LH1486", None).unwrap().id, fid(6));
+    assert_eq!(get("lh-1486", Some("2025-05-01")).unwrap().id, fid(5));
     assert_eq!(
         get("1486", None).unwrap().id,
         fid(6),
         "unambiguous bare number"
     );
-    assert_eq!(get(&fid(3), None).unwrap().flight_code, "VN333");
-    assert!(
-        matches!(get("LX1486", Some("2025-05-02")), Err(Error::NotFound(m)) if m.contains("2025-05-01"))
-    );
-    assert!(matches!(get("QR999", None), Err(Error::NotFound(_))));
+    assert_eq!(get(&fid(3), None).unwrap().flight_code, "AM333");
+    // 04:00 UTC on the 23rd is 22:00 on the 22nd in Mexico City: the date is the local one.
+    assert_eq!(get("AM333", Some("2031-03-22")).unwrap().id, fid(3));
     assert!(matches!(
-        get("QR111", Some("17/03/2031")),
+        get("AM333", Some("2031-03-23")),
+        Err(Error::NotFound(_))
+    ));
+    assert!(
+        matches!(get("LH1486", Some("2025-05-02")), Err(Error::NotFound(m)) if m.contains("2025-05-01"))
+    );
+    assert!(matches!(get("IB999", None), Err(Error::NotFound(_))));
+    assert!(matches!(
+        get("IB111", Some("17/03/2031")),
         Err(Error::BadInput(_))
     ));
     assert!(matches!(get("hello", None), Err(Error::BadInput(_))));
     // Followed flights are searchable; friends' are not.
-    assert_eq!(get("QR555", None).unwrap().relation, Relation::Following);
-    assert!(matches!(get("VN666", None), Err(Error::NotFound(_))));
+    assert_eq!(get("IB555", None).unwrap().relation, Relation::Following);
+    assert!(matches!(get("AM666", None), Err(Error::NotFound(_))));
 }
 
 #[test]
@@ -237,7 +243,7 @@ fn bare_number_ambiguity_lists_options() {
     .unwrap_err();
     let msg = err.to_string();
     assert!(matches!(err, Error::BadInput(_)));
-    assert!(msg.contains("LX1486") && msg.contains("VN1486"), "{msg}");
+    assert!(msg.contains("LH1486") && msg.contains("AM1486"), "{msg}");
 }
 
 #[test]
@@ -250,29 +256,29 @@ fn accent_insensitive_search() {
         ..Default::default()
     };
 
-    assert_eq!(search(q("con dao")), vec![fid(4), fid(9)]);
+    assert_eq!(search(q("queretaro")), vec![fid(4), fid(9)]);
     assert_eq!(
-        search(q("zurich")),
+        search(q("dusseldorf")),
         vec![MANUAL.to_string(), fid(5), fid(6)]
     );
-    assert_eq!(search(q("ZÜRICH")), search(q("zurich")));
-    assert_eq!(search(q("qr 111")), vec![fid(1)]);
-    assert_eq!(search(q("Ha Noi")), vec![fid(2), fid(3)]);
+    assert_eq!(search(q("DÜSSELDORF")), search(q("dusseldorf")));
+    assert_eq!(search(q("ib 111")), vec![fid(1)]);
+    assert_eq!(search(q("juarez")), vec![fid(2), fid(3)]);
 
     let from_to = SearchArgs {
-        from: Some("sgn".into()),
-        to: Some("côn đảo".into()),
+        from: Some("gdl".into()),
+        to: Some("querétaro".into()),
         ..Default::default()
     };
     assert_eq!(search(from_to), vec![fid(4)]);
     let airline = SearchArgs {
-        airline: Some("swiss".into()),
+        airline: Some("lufthansa".into()),
         after: Some("2025-04-01".into()),
         ..Default::default()
     };
     assert_eq!(search(airline), vec![fid(5), fid(6)]);
     let before = SearchArgs {
-        airline: Some("LX".into()),
+        airline: Some("LH".into()),
         before: Some("2025-03-01".into()),
         ..Default::default()
     };
@@ -294,9 +300,9 @@ fn cancelled_flagged_in_table() {
     let f = list.flights.iter().find(|f| f.id == fid(9)).unwrap();
     assert!(f.cancelled);
     let table = list.table();
-    let line = table.lines().find(|l| l.contains("VN7777")).unwrap();
+    let line = table.lines().find(|l| l.contains("AM7777")).unwrap();
     assert!(line.contains("[CANCELLED]"), "{line}");
-    assert!(table.contains("VCS → SGN"));
+    assert!(table.contains("QRO → GDL"));
 }
 
 #[test]
@@ -328,5 +334,5 @@ fn json_has_no_token() {
     };
     let json = flightydeck::render::to_json(&flights::list(&fx.ctx(), &a).unwrap());
     assert!(!json.contains("eyJ") && !json.contains("test.user.token"));
-    assert!(json.contains("\"flight_code\": \"QR111\""));
+    assert!(json.contains("\"flight_code\": \"IB111\""));
 }

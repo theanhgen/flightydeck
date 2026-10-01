@@ -222,7 +222,7 @@ fn ics_date_needs_a_flight() {
 #[test]
 fn add_with_bad_date_is_bad_input() {
     let fx = common::fixture();
-    let out = run(flightydeck(&fx.db).args(["-o", "json", "add", "VN333", "2026-13-45"]));
+    let out = run(flightydeck(&fx.db).args(["-o", "json", "add", "AM333", "2031-13-45"]));
     assert_eq!(out.status.code(), Some(2));
     assert_eq!(json(&out)["error"]["kind"], "bad_input");
 }
@@ -233,7 +233,7 @@ fn add_in_read_only_mode_is_refused() {
     let out =
         run(flightydeck(&fx.db)
             .env("FLIGHTY_READ_ONLY", "1")
-            .args(["add", "VN333", "2026-10-14"]));
+            .args(["add", "AM333", "2031-03-14"]));
     assert_eq!(out.status.code(), Some(5));
     assert!(String::from_utf8_lossy(&out.stderr).contains("read-only"));
 }
@@ -243,8 +243,8 @@ fn follow_in_read_only_mode_is_refused() {
     let fx = common::fixture();
     let out = run(flightydeck(&fx.db).env("FLIGHTY_READ_ONLY", "1").args([
         "follow",
-        "VN333",
-        "2026-10-14",
+        "AM333",
+        "2031-03-14",
     ]));
     assert_eq!(out.status.code(), Some(5));
 }

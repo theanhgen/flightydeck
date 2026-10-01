@@ -1,6 +1,6 @@
 [package]
 name = "flightydeck"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2024"
 description = "Unofficial CLI + MCP server for your Flighty flights (macOS). Not affiliated with Flighty."
 license = "MIT"

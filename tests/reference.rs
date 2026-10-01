@@ -22,20 +22,20 @@ fn airport_codes(query: &str) -> Vec<String> {
 
 #[test]
 fn accent_insensitive_airports() {
-    assert_eq!(airport_codes("con dao"), vec!["VCS"]);
-    assert_eq!(airport_codes("zurich"), vec!["ZRH"]);
-    assert_eq!(airport_codes("Côn Đảo"), vec!["VCS"]);
-    assert_eq!(airport_codes("ho chi minh"), vec!["SGN"]);
+    assert_eq!(airport_codes("queretaro"), vec!["QRO"]);
+    assert_eq!(airport_codes("dusseldorf"), vec!["DUS"]);
+    assert_eq!(airport_codes("Querétaro"), vec!["QRO"]);
+    assert_eq!(airport_codes("guadalajara"), vec!["GDL"]);
 }
 
 #[test]
 fn exact_code_ranks_first() {
-    // "han" is HAN's code; no other fixture airport contains it, but the code hit must lead.
+    // "mex" is MEX's code and also the start of its city name; the code hit must lead.
     assert_eq!(
-        airport_codes("han").first().map(String::as_str),
-        Some("HAN")
+        airport_codes("mex").first().map(String::as_str),
+        Some("MEX")
     );
-    assert_eq!(airport_codes("lkpr"), vec!["PRG"]);
+    assert_eq!(airport_codes("egll"), vec!["LHR"]);
 }
 
 #[test]
@@ -49,9 +49,9 @@ fn skips_deleted() {
 #[test]
 fn airlines_by_code_returns_every_match() {
     let fx = common::fixture();
-    let res = reference::airlines(&fx.ctx(), &q("QR")).unwrap();
+    let res = reference::airlines(&fx.ctx(), &q("IB")).unwrap();
     let names: Vec<_> = res.airlines.iter().filter_map(|a| a.name.clone()).collect();
-    assert_eq!(names, vec!["Qatar Airways", "Qatar Executive"]);
+    assert_eq!(names, vec!["Iberia", "Iberia Charter"]);
     assert!(res.airlines.iter().all(|a| !a.id.is_empty()));
 }
 
@@ -74,10 +74,12 @@ fn limit_and_empty_query() {
 #[test]
 fn renders_tables() {
     let fx = common::fixture();
-    let t = reference::airports(&fx.ctx(), &q("zurich"))
+    let t = reference::airports(&fx.ctx(), &q("dusseldorf"))
         .unwrap()
         .table();
-    assert!(t.contains("ZRH") && t.contains("Europe/Zurich"));
-    let t = reference::airlines(&fx.ctx(), &q("swiss")).unwrap().table();
-    assert!(t.contains("LX") && t.contains("SWR"));
+    assert!(t.contains("DUS") && t.contains("Europe/Berlin"));
+    let t = reference::airlines(&fx.ctx(), &q("lufthansa"))
+        .unwrap()
+        .table();
+    assert!(t.contains("LH") && t.contains("DLH"));
 }

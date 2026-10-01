@@ -25,10 +25,10 @@ fn bad_input_is_rejected_first() {
     // Read-only too: validation still wins, so the user learns about the typo first.
     ctx.read_only = true;
     for (code, date) in [
-        ("QR", "2031-03-17"),
+        ("IB", "2031-03-17"),
         ("QRX1", "2031-03-17"),
-        ("QR111", ""),
-        ("QR111", "2031-02-29"),
+        ("IB111", ""),
+        ("IB111", "2031-02-29"),
     ] {
         for r in [
             write::add(&ctx, &args(code, date)),
@@ -47,7 +47,7 @@ fn read_only_refuses_writes() {
     let mut ctx = f.ctx();
     ctx.read_only = true;
     ctx.allow_remove = true;
-    let a = args("QR111", "2031-03-17");
+    let a = args("IB111", "2031-03-17");
     assert!(matches!(write::add(&ctx, &a), Err(Error::Refused(_))));
     assert!(matches!(write::follow(&ctx, &a), Err(Error::Refused(_))));
     let rm = RemoveArgs {
@@ -96,7 +96,7 @@ fn remove_needs_yes_and_a_uuid() {
     let e = write::remove(
         &ctx,
         &RemoveArgs {
-            id: "QR111".into(),
+            id: "IB111".into(),
             yes: true,
         },
     )

@@ -38,10 +38,10 @@ It's a single static binary. No Node or Python runtime.
 
 ```sh
 flightydeck list --upcoming              # your next flights
-flightydeck status QR111                 # schedule vs estimate vs actual, gate, terminal, belt
-flightydeck airports "con dao"           # accent-insensitive: finds Côn Đảo
+flightydeck status BA286                 # schedule vs estimate vs actual, gate, terminal, belt
+flightydeck airports "sao paulo"         # accent-insensitive: finds São Paulo
 flightydeck stats --year 2031            # distance, time in the air, top routes
-flightydeck add VN333 2031-03-18         # add a flight you're on
+flightydeck add UA901 2031-03-18         # add a flight you're on
 flightydeck ics --upcoming > flights.ics  # your flights for any calendar app
 flightydeck list -o json | jq '.[0]'     # JSON for scripts and agents
 ```
@@ -77,10 +77,10 @@ A readable table by default; `-o json` on any command gives the same shape the M
 Times are shown in each airport's local zone. In JSON every timestamp is an object:
 
 ```json
-{ "utc": "2031-03-18T07:05:00Z", "local": "2031-03-18T14:05:00+07:00", "tz": "Asia/Ho_Chi_Minh" }
+{ "utc": "2031-03-18T21:05:00Z", "local": "2031-03-18 14:05", "tz": "America/Los_Angeles" }
 ```
 
-Search is accent- and case-insensitive (`con dao` finds Côn Đảo).
+Search is accent- and case-insensitive (`sao paulo` finds São Paulo).
 
 ### Calendar export
 

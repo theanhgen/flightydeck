@@ -30,7 +30,7 @@ fn one_flight_is_one_complete_event() {
     let f = flights::get(
         &fx.ctx(),
         &GetArgs {
-            flight: "QR111".into(),
+            flight: "IB111".into(),
             date: Some("2031-03-17".into()),
         },
     )
@@ -50,11 +50,11 @@ fn one_flight_is_one_complete_event() {
             "DTSTAMP:20310101T000000Z",
             "DTSTART:20310317T145000Z",
             "DTEND:20310317T204000Z",
-            "SUMMARY:QR111 PRG → DOH",
-            "LOCATION:Václav Havel Prague (PRG)\\, Terminal 1",
-            "DESCRIPTION:Qatar Airways QR111\\nDeparts: Prague (PRG)\\, Mon 17 Mar 2031 15:50 +01\\, \
-             terminal 1\\, gate A1\\nArrives: Doha (DOH)\\, Mon 17 Mar 2031 23:40 +03\\nSeat: 32A\\n\
-             Cabin: economy\\nBooking: TEST01\\nAircraft: Airbus A350-900 (A7-TST)",
+            "SUMMARY:IB111 LHR → MAD",
+            "LOCATION:London Heathrow (LHR)\\, Terminal 1",
+            "DESCRIPTION:Iberia IB111\\nDeparts: London (LHR)\\, Mon 17 Mar 2031 14:50 +00\\, \
+             terminal 1\\, gate A1\\nArrives: Madrid (MAD)\\, Mon 17 Mar 2031 21:40 +01\\nSeat: 32A\\n\
+             Cabin: economy\\nBooking: TEST01\\nAircraft: Airbus A350-900 (EC-TST)",
             "END:VEVENT",
             "END:VCALENDAR",
             "",

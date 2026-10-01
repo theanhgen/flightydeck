@@ -44,7 +44,7 @@ pub fn open(ctx: &Ctx) -> Result<Connection> {
 }
 
 /// Accent/case fold: NFD, drop combining marks, lower-case, map đ/Đ → d (NFD doesn't).
-/// "Côn Đảo" → "con dao", "Zürich" → "zurich".
+/// "Querétaro" → "queretaro", "Düsseldorf" → "dusseldorf".
 pub fn fold(s: &str) -> String {
     s.nfd()
         .filter(|c| !unicode_normalization::char::is_combining_mark(*c))
@@ -120,10 +120,10 @@ mod tests {
     use super::fold;
 
     #[test]
-    fn folds_vietnamese_and_german() {
-        assert_eq!(fold("Côn Đảo"), "con dao");
-        assert_eq!(fold("Zürich"), "zurich");
-        assert_eq!(fold("Tân Sơn Nhất"), "tan son nhat");
-        assert_eq!(fold("Nội Bài"), "noi bai");
+    fn folds_accents() {
+        assert_eq!(fold("Querétaro"), "queretaro");
+        assert_eq!(fold("Düsseldorf"), "dusseldorf");
+        assert_eq!(fold("São Paulo"), "sao paulo");
+        assert_eq!(fold("Đakovo"), "dakovo");
     }
 }

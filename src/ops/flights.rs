@@ -48,7 +48,7 @@ pub struct ListArgs {
 
 #[derive(Debug, Clone, Deserialize, JsonSchema, clap::Args)]
 pub struct GetArgs {
-    /// Flight code ("QR111", "VN 333") or Flighty flight UUID.
+    /// Flight code ("BA286", "UA 901") or Flighty flight UUID.
     pub flight: String,
     /// Departure date YYYY-MM-DD (local). Default: nearest to now.
     #[arg(long)]
@@ -584,7 +584,7 @@ fn strip_zeros(n: &str) -> String {
     if t.is_empty() { "0".into() } else { t.into() }
 }
 
-/// "qr 111", "QR-111", "QR0111" → Code(QR, 111); "1486" → Number; a UUID → Id.
+/// "ib 111", "IB-111", "IB0111" → Code(QR, 111); "1486" → Number; a UUID → Id.
 pub(crate) fn parse_flight(input: &str) -> Result<FlightQuery> {
     let input = input.trim();
     if UUID.is_match(input) {
@@ -600,7 +600,7 @@ pub(crate) fn parse_flight(input: &str) -> Result<FlightQuery> {
     }
     let caps = CODE.captures(&norm).ok_or_else(|| {
         Error::BadInput(format!(
-            "'{input}' is not a flight code (like QR111 or VN 333) or a Flighty flight id"
+            "'{input}' is not a flight code (like BA286 or UA 901) or a Flighty flight id"
         ))
     })?;
     Ok(FlightQuery::Code {
@@ -883,8 +883,8 @@ mod tests {
             airline: a.into(),
             number: n.into(),
         };
-        assert_eq!(parse_flight("qr 111").unwrap(), code("QR", "111"));
-        assert_eq!(parse_flight("QR-0111").unwrap(), code("QR", "111"));
+        assert_eq!(parse_flight("ib 111").unwrap(), code("IB", "111"));
+        assert_eq!(parse_flight("IB-0111").unwrap(), code("IB", "111"));
         assert_eq!(parse_flight("5J 123").unwrap(), code("5J", "123"));
         assert_eq!(
             parse_flight("0486").unwrap(),
@@ -900,6 +900,6 @@ mod tests {
 
     #[test]
     fn escapes_like() {
-        assert_eq!(like("Zürich 50%"), "%zurich 50\\%%");
+        assert_eq!(like("Düsseldorf 50%"), "%dusseldorf 50\\%%");
     }
 }

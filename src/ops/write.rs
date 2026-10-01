@@ -16,7 +16,7 @@ use crate::{creds, db, owner, proto, time};
 
 #[derive(Debug, Clone, Deserialize, JsonSchema, clap::Args)]
 pub struct AddArgs {
-    /// Flight code, e.g. "VN333".
+    /// Flight code, e.g. "UA901".
     pub flight: String,
     /// Departure date YYYY-MM-DD (local to the departure airport).
     pub date: String,
@@ -86,7 +86,7 @@ fn validate(a: &AddArgs) -> Result<Wanted> {
         .to_uppercase();
     let caps = CODE.captures(&code).ok_or_else(|| {
         Error::BadInput(format!(
-            "invalid flight code {:?}: expected airline code + number, like \"QR111\" or \"VN 333\"",
+            "invalid flight code {:?}: expected airline code + number, like \"BA286\" or \"UA 901\"",
             a.flight
         ))
     })?;
@@ -375,8 +375,8 @@ mod tests {
 
     const F01: &str = "f0000000-0000-4000-8000-000000000001";
     const NEW: &str = "11111111-2222-4333-8444-555555555555";
-    const QATAR: &str = "b0000000-0000-4000-8000-000000000001";
-    const QATAR_EXEC: &str = "b0000000-0000-4000-8000-000000000002";
+    const IBERIA: &str = "b0000000-0000-4000-8000-000000000001";
+    const IBERIA_CHARTER: &str = "b0000000-0000-4000-8000-000000000002";
 
     fn args(flight: &str, date: &str) -> AddArgs {
         AddArgs {
@@ -403,8 +403,8 @@ mod tests {
 
     #[test]
     fn parses_codes() {
-        let w = validate(&args(" qr-111 ", "2031-03-17")).unwrap();
-        assert_eq!((w.iata.as_str(), w.number.as_str()), ("QR", "111"));
+        let w = validate(&args(" ib-111 ", "2031-03-17")).unwrap();
+        assert_eq!((w.iata.as_str(), w.number.as_str()), ("IB", "111"));
         assert_eq!(validate(&args("9w 7", "2031-03-17")).unwrap().code(), "9W7");
         assert_eq!(
             validate(&args("u2 1234", "2031-03-17")).unwrap().code(),
@@ -418,15 +418,15 @@ mod tests {
         let mock = Mock::start(vec![(200, found(NEW))]);
         let c = client(&ctx, &mock);
         for (code, date) in [
-            ("QR", "2031-03-17"),
+            ("IB", "2031-03-17"),
             ("111", "2031-03-17"),
             ("QRX111", "2031-03-17"),
             ("", "2031-03-17"),
-            ("QR111", ""),
-            ("QR111", "2031-02-30"),
-            ("QR111", "2031-3-7"),
-            ("QR111", "17.03.2031"),
-            ("QR111", "tomorrow"),
+            ("IB111", ""),
+            ("IB111", "2031-02-30"),
+            ("IB111", "2031-3-7"),
+            ("IB111", "17.03.2031"),
+            ("IB111", "tomorrow"),
         ] {
             let e = add_for(&ctx, OWNER, &args(code, date), &c).unwrap_err();
             assert!(matches!(e, Error::BadInput(_)), "{code} {date}: {e}");
@@ -444,11 +444,11 @@ mod tests {
         let mock = Mock::start(vec![(200, found(NEW))]);
         let c = client(&ctx, &mock);
         assert!(matches!(
-            add_for(&ctx, OWNER, &args("QR999", "2031-03-17"), &c),
+            add_for(&ctx, OWNER, &args("IB999", "2031-03-17"), &c),
             Err(Error::Refused(_))
         ));
         assert!(matches!(
-            follow_for(&ctx, OWNER, &args("QR999", "2031-03-17"), &c),
+            follow_for(&ctx, OWNER, &args("IB999", "2031-03-17"), &c),
             Err(Error::Refused(_))
         ));
         let rm = RemoveArgs {
@@ -463,32 +463,40 @@ mod tests {
     fn candidates_prefer_used_airlines_then_relevance() {
         let (_d, ctx) = testing::ctx();
         let conn = rusqlite::Connection::open(&ctx.db_path).unwrap();
-        // A more relevant QR airline the owner never flew, and a deleted one.
+        // A more relevant IB airline the owner never flew, and a deleted one.
         conn.execute_batch(
             "INSERT INTO Airline (id,name,iata,relevance,created,lastUpdated) VALUES
-               ('b0000000-0000-4000-8000-0000000000f1','Busy QR',        'QR',999,0,0);
+               ('b0000000-0000-4000-8000-0000000000f1','Busy IB',        'IB',999,0,0);
              INSERT INTO Airline (id,name,iata,relevance,created,lastUpdated,deleted) VALUES
-               ('b0000000-0000-4000-8000-0000000000f2','Gone QR','QR',5000,0,0,1);",
+               ('b0000000-0000-4000-8000-0000000000f2','Gone IB','IB',5000,0,0,1);",
         )
         .unwrap();
-        let ids: Vec<String> = airline_candidates(&conn, OWNER, "QR")
+        let ids: Vec<String> = airline_candidates(&conn, OWNER, "IB")
             .unwrap()
             .into_iter()
             .map(|a| a.id)
             .collect();
         assert_eq!(
             ids,
-            [QATAR, "b0000000-0000-4000-8000-0000000000f1", QATAR_EXEC]
+            [
+                IBERIA,
+                "b0000000-0000-4000-8000-0000000000f1",
+                IBERIA_CHARTER
+            ]
         );
         // For someone with no flights, relevance alone decides.
-        let ids: Vec<String> = airline_candidates(&conn, "nobody", "QR")
+        let ids: Vec<String> = airline_candidates(&conn, "nobody", "IB")
             .unwrap()
             .into_iter()
             .map(|a| a.id)
             .collect();
         assert_eq!(
             ids,
-            ["b0000000-0000-4000-8000-0000000000f1", QATAR, QATAR_EXEC]
+            [
+                "b0000000-0000-4000-8000-0000000000f1",
+                IBERIA,
+                IBERIA_CHARTER
+            ]
         );
     }
 
@@ -497,13 +505,13 @@ mod tests {
         let (_d, ctx) = testing::ctx();
         let mock = Mock::start(vec![(200, found(NEW)), (200, vec![])]);
         let c = client(&ctx, &mock);
-        let r = add_for(&ctx, OWNER, &args("qr 111", "2031-03-17"), &c).unwrap();
+        let r = add_for(&ctx, OWNER, &args("ib 111", "2031-03-17"), &c).unwrap();
         assert_eq!(r.outcome, "already_tracked");
         assert_eq!(r.flight_id.as_deref(), Some(F01));
         assert!(mock.requests().is_empty());
 
         // Someone else's flight doesn't count.
-        let r = add_for(&ctx, "someone-else", &args("QR111", "2031-03-17"), &c).unwrap();
+        let r = add_for(&ctx, "someone-else", &args("IB111", "2031-03-17"), &c).unwrap();
         assert_eq!(r.outcome, "added");
     }
 
@@ -513,7 +521,7 @@ mod tests {
         // Different date locally, but the server resolves to a flight the owner already has.
         let mock = Mock::start(vec![(200, found(F01))]);
         let c = client(&ctx, &mock);
-        let r = add_for(&ctx, OWNER, &args("QR111", "2031-03-18"), &c).unwrap();
+        let r = add_for(&ctx, OWNER, &args("IB111", "2031-03-18"), &c).unwrap();
         assert_eq!(r.outcome, "already_tracked");
         assert_eq!(mock.requests().len(), 1);
         assert_eq!(mock.requests()[0].target, "/v1/search");
@@ -526,7 +534,7 @@ mod tests {
         let c = client(&ctx, &mock);
         let a = AddArgs {
             force: true,
-            ..args("QR111", "2031-03-17")
+            ..args("IB111", "2031-03-17")
         };
         let r = add_for(&ctx, OWNER, &a, &c).unwrap();
         assert_eq!(r.outcome, "added");
@@ -553,16 +561,16 @@ mod tests {
             ..args(flight, date)
         };
 
-        let r = add_for(&ctx, OWNER, &dry("QR999", "2031-04-01", false), &c).unwrap();
+        let r = add_for(&ctx, OWNER, &dry("IB999", "2031-04-01", false), &c).unwrap();
         assert_eq!(r.outcome, "would_add");
         assert_eq!(r.flight_id.as_deref(), Some(NEW));
-        assert_eq!(r.airline.as_deref(), Some("Qatar Airways"));
+        assert_eq!(r.airline.as_deref(), Some("Iberia"));
 
-        let r = follow_for(&ctx, OWNER, &dry("QR999", "2031-04-01", true), &c).unwrap();
+        let r = follow_for(&ctx, OWNER, &dry("IB999", "2031-04-01", true), &c).unwrap();
         assert_eq!(r.outcome, "would_follow");
 
         // A flight the owner already has is still reported as tracked.
-        let r = add_for(&ctx, OWNER, &dry("QR111", "2031-03-18", false), &c).unwrap();
+        let r = add_for(&ctx, OWNER, &dry("IB111", "2031-03-18", false), &c).unwrap();
         assert_eq!(r.outcome, "already_tracked");
 
         let reqs = mock.requests();
@@ -573,26 +581,26 @@ mod tests {
     #[test]
     fn tries_every_candidate_then_subscribes() {
         let (_d, ctx) = testing::ctx();
-        // First candidate (Qatar Airways) finds nothing; second (Qatar Executive) does.
+        // First candidate (Iberia) finds nothing; second (Iberia Charter) does.
         let mock = Mock::start(vec![(200, vec![]), (200, found(NEW)), (200, vec![])]);
         let c = client(&ctx, &mock);
-        let r = add_for(&ctx, OWNER, &args("QR999", "2031-04-01"), &c).unwrap();
+        let r = add_for(&ctx, OWNER, &args("IB999", "2031-04-01"), &c).unwrap();
         assert_eq!(r.outcome, "added");
         assert_eq!(r.flight_id.as_deref(), Some(NEW));
-        assert_eq!(r.airline.as_deref(), Some("Qatar Executive"));
+        assert_eq!(r.airline.as_deref(), Some("Iberia Charter"));
         assert_eq!(
             r.message,
-            "Added QR999 on 2031-04-01 on the server; the Mac app shows it after its next sync."
+            "Added IB999 on 2031-04-01 on the server; the Mac app shows it after its next sync."
         );
         let reqs = mock.requests();
         assert_eq!(reqs.len(), 3);
         assert_eq!(
             reqs[0].body,
-            proto::search_request(QATAR, "999", "2031-04-01")
+            proto::search_request(IBERIA, "999", "2031-04-01")
         );
         assert_eq!(
             reqs[1].body,
-            proto::search_request(QATAR_EXEC, "999", "2031-04-01")
+            proto::search_request(IBERIA_CHARTER, "999", "2031-04-01")
         );
         assert_eq!(
             reqs[2].target,
@@ -605,7 +613,7 @@ mod tests {
         let (_d, ctx) = testing::ctx();
         let mock = Mock::start(vec![(200, found(NEW)), (200, vec![])]);
         let c = client(&ctx, &mock);
-        let r = follow_for(&ctx, OWNER, &args("QR999", "2031-04-01"), &c).unwrap();
+        let r = follow_for(&ctx, OWNER, &args("IB999", "2031-04-01"), &c).unwrap();
         assert_eq!(r.outcome, "followed");
         assert_eq!(
             mock.requests()[1].target,
@@ -618,9 +626,9 @@ mod tests {
         let (_d, ctx) = testing::ctx();
         let mock = Mock::start(vec![(200, vec![]), (200, vec![])]);
         let c = client(&ctx, &mock);
-        let e = add_for(&ctx, OWNER, &args("QR999", "2031-04-01"), &c).unwrap_err();
+        let e = add_for(&ctx, OWNER, &args("IB999", "2031-04-01"), &c).unwrap_err();
         assert!(
-            matches!(e, Error::NotFound(ref m) if m.contains("Qatar Executive")),
+            matches!(e, Error::NotFound(ref m) if m.contains("Iberia Charter")),
             "{e}"
         );
         assert_eq!(mock.requests().len(), 2);
@@ -640,7 +648,7 @@ mod tests {
         proto::put_bytes_field(&mut body, 1, &decoy);
         let mock = Mock::start(vec![(200, body.clone()), (200, body)]);
         let c = client(&ctx, &mock);
-        let e = add_for(&ctx, OWNER, &args("QR999", "2031-04-01"), &c).unwrap_err();
+        let e = add_for(&ctx, OWNER, &args("IB999", "2031-04-01"), &c).unwrap_err();
         assert!(
             matches!(e, Error::Api(ref m) if m == "unexpected search response format"),
             "{e}"

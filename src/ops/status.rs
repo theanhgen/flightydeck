@@ -15,7 +15,7 @@ use crate::time::{self, Stamp};
 
 #[derive(Debug, Clone, Deserialize, JsonSchema, clap::Args)]
 pub struct FlightRef {
-    /// Flight code ("QR111") or Flighty flight UUID.
+    /// Flight code ("BA286") or Flighty flight UUID.
     pub flight: String,
     /// Departure date YYYY-MM-DD (local). Default: nearest to now.
     #[arg(long)]

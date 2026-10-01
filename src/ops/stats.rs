@@ -86,7 +86,7 @@ struct Leg {
     air_minutes: Option<i64>,
 }
 
-/// "QR", or ICAO, or nothing; then the number.
+/// "IB", or ICAO, or nothing; then the number.
 fn flight_code(iata: Option<String>, icao: Option<String>, number: Option<String>) -> String {
     let prefix = iata.or(icao).unwrap_or_default();
     format!("{prefix}{}", number.unwrap_or_default())

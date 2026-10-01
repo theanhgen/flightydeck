@@ -38,7 +38,7 @@ enum Cmd {
     List(ListArgs),
     /// Show one flight by code or UUID.
     #[command(long_about = "Show one flight by code or Flighty UUID.\n\n\
-        Examples:\n  flightydeck get QR111\n  flightydeck get \"VN 333\" --date 2026-10-14\n  \
+        Examples:\n  flightydeck get BA286\n  flightydeck get \"UA 901\" --date 2031-03-14\n  \
         flightydeck -o json get 3f2c9a1e-0000-4000-8000-000000000000")]
     Get(GetArgs),
     /// Search your flights by text, airports, airline or dates.
@@ -57,7 +57,7 @@ enum Cmd {
         newer export updates events in calendar apps that match on UID. Times are UTC; the calendar \
         app shows them in your zone. With -o json the file is in the `ics` field.\n\n\
         Examples:\n  flightydeck ics --upcoming > flights.ics\n  flightydeck ics --year 2031 > 2031.ics\n  \
-        flightydeck ics QR111 --date 2031-03-17 > qr111.ics"
+        flightydeck ics BA286 --date 2031-03-17 > ba286.ics"
     )]
     Ics(IcsArgs),
     /// Flights of your connected Flighty friends.
@@ -75,7 +75,7 @@ enum Cmd {
         long_about = "Add a flight you are flying to your Flighty account.\n\n\
         The date is the local departure date at the origin airport. Refused in read-only mode \
         (FLIGHTY_READ_ONLY=1). If the flight already looks tracked, nothing is sent unless --force.\n\n\
-        Examples:\n  flightydeck add VN333 2026-10-14\n  flightydeck add \"QR 111\" 2026-11-02 --force"
+        Examples:\n  flightydeck add UA901 2031-03-14\n  flightydeck add \"BA 286\" 2031-04-02 --force"
     )]
     Add(AddArgs),
     /// Follow a flight you are not on.

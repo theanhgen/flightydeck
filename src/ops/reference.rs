@@ -1,4 +1,4 @@
-//! Airport and airline lookup (accent-insensitive: "con dao" finds VCS).
+//! Airport and airline lookup (accent-insensitive: "queretaro" finds QRO).
 
 use rusqlite::{Connection, ToSql};
 use schemars::JsonSchema;
