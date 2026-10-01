@@ -64,7 +64,7 @@ done < <(grep -HnIF "$bearer" -- "${files[@]}" 2>/dev/null || true)
 while IFS= read -r hit; do
   addr=${hit##*:}
   case "$addr" in
-    *@example.com | *@example.org | *@example.net | noreply@anthropic.com | *@api.flightyapp.com) continue ;;
+    *@example.com | *@example.org | *@example.net | noreply@anthropic.com | *@api.flightyapp.com | git@github.com) continue ;;
   esac
   fail "email address: $hit"
 done < <(grep -HnIoE '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' -- "${files[@]}" 2>/dev/null || true)

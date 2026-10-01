@@ -21,6 +21,8 @@ brew install theanhgen/tap/flightydeck
 flightydeck about                        # checks it can find Flighty
 ```
 
+Update with `brew upgrade flightydeck`; the formula follows every release.
+
 Or build it yourself with a Rust toolchain:
 
 ```sh
