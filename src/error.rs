@@ -54,6 +54,12 @@ impl From<rusqlite::Error> for Error {
         let msg = e.to_string();
         if msg.contains("database is locked") || msg.contains("busy") {
             Error::Other("Flighty is syncing its database; retry in a moment".into())
+        } else if msg.contains("unable to open database file") {
+            Error::NotReady(format!(
+                "can't open the Flighty database ({msg}). If the Flighty Mac app is installed and \
+                 signed in, give your terminal app Full Disk Access in System Settings > Privacy & \
+                 Security, then reopen the terminal"
+            ))
         } else if msg.contains("no such column") || msg.contains("no such table") {
             Error::NotReady(format!(
                 "Flighty's database layout changed ({msg}); update flightydeck"
