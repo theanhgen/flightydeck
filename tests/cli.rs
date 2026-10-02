@@ -142,6 +142,26 @@ fn list_without_db_is_not_ready() {
 }
 
 #[test]
+fn unreadable_db_explains_the_macos_permission() {
+    use std::os::unix::fs::PermissionsExt;
+    let fx = common::fixture();
+    std::fs::set_permissions(&fx.db, std::fs::Permissions::from_mode(0o000)).unwrap();
+    if std::fs::File::open(&fx.db).is_ok() {
+        return; // running as root: permissions don't apply
+    }
+    let out = run(flightydeck(&fx.db).args(["-o", "json", "list"]));
+    assert_eq!(out.status.code(), Some(3));
+    let message = json(&out)["error"]["message"].as_str().unwrap().to_string();
+    assert!(message.contains("Full Disk Access"), "{message}");
+    assert!(!message.contains("database error"), "{message}");
+
+    // `about` still answers and carries the same explanation.
+    let out = run(flightydeck(&fx.db).arg("about"));
+    assert!(out.status.success());
+    assert!(String::from_utf8_lossy(&out.stdout).contains("Full Disk Access"));
+}
+
+#[test]
 fn about_without_db_reports_it() {
     let out = run(flightydeck(&missing_db()).args(["-o", "json", "about"]));
     assert!(

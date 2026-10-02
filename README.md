@@ -177,6 +177,16 @@ and the MCP server follow the same rules.
 - **Writes** call Flighty's API the same way the app does: search for the flight, then subscribe
   to it as a passenger (`add`) or a follower (`follow`). The flight then syncs to your devices.
 
+## Troubleshooting
+
+- **"macOS is blocking this terminal from reading Flighty's data"** (or "unable to open
+  database file"): macOS protects each app's data from other apps. Open System Settings >
+  Privacy & Security > Full Disk Access, turn it on for your terminal app, then quit and reopen
+  the terminal.
+- **"Flighty database not found"**: the Flighty **Mac** app isn't installed, or was never
+  opened and signed in on this Mac. Having Flighty only on your iPhone is not enough.
+- `flightydeck about` shows what it found: the database, the sign-in and the schema.
+
 ## Limitations
 
 - macOS only, and only with the Flighty Mac app installed and signed in.

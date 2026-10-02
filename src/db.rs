@@ -5,6 +5,8 @@
 //! read-only flags; 5 s busy timeout; never touch -journal/-wal files; never write.
 
 use std::collections::HashMap;
+use std::io::ErrorKind;
+use std::path::Path;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
@@ -17,12 +19,7 @@ use crate::error::{Error, Result};
 
 /// Open the main DB read-only with `fold()` registered.
 pub fn open(ctx: &Ctx) -> Result<Connection> {
-    if !ctx.db_path.exists() {
-        return Err(Error::NotReady(format!(
-            "Flighty database not found at {}. Install the Flighty Mac app, open it and sign in once.",
-            ctx.db_path.display()
-        )));
-    }
+    check_readable(&ctx.db_path)?;
     let conn = Connection::open_with_flags(
         &ctx.db_path,
         OpenFlags::SQLITE_OPEN_READ_ONLY
@@ -41,6 +38,26 @@ pub fn open(ctx: &Ctx) -> Result<Connection> {
         },
     )?;
     Ok(conn)
+}
+
+/// Says why the database can't be read, before SQLite turns it into "unable to open
+/// database file". macOS denies other apps' containers to a terminal that lacks the permission.
+fn check_readable(path: &Path) -> Result<()> {
+    let Err(e) = std::fs::File::open(path) else {
+        return Ok(());
+    };
+    let at = path.display();
+    Err(Error::NotReady(match e.kind() {
+        ErrorKind::NotFound => format!(
+            "Flighty database not found at {at}. Install the Flighty Mac app, open it and sign in once."
+        ),
+        ErrorKind::PermissionDenied => format!(
+            "macOS is blocking this terminal from reading Flighty's data at {at}. \
+             Open System Settings > Privacy & Security > Full Disk Access, turn it on for your \
+             terminal app, then quit and reopen the terminal."
+        ),
+        _ => format!("can't read the Flighty database at {at}: {e}"),
+    }))
 }
 
 /// Accent/case fold: NFD, drop combining marks, lower-case, map đ/Đ → d (NFD doesn't).
