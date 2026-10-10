@@ -135,6 +135,10 @@ arrives   15:30      15:55      —
             <p><code>flightydeck add UA901 2031-03-14</code> adds a flight you're on; <code>follow</code> tracks someone else's. They show up on your phone like any other.</p>
           </article>
           <article class="card">
+            <h3>Seat, cabin and booking reference</h3>
+            <p><code>flightydeck ticket UA901 --seat 23A --cabin business --booking-ref ABC123</code> fills in the ticket, the way the app does. Fields you leave out keep their value.</p>
+          </article>
+          <article class="card">
             <h3>Watch, stats, connections</h3>
             <p><code>flightydeck watch</code> follows a flight until it lands and shows what changed. Plus distance flown, delay history, layovers and your Flighty Friends' flights.</p>
           </article>
@@ -220,6 +224,7 @@ arrives   15:30      15:55      —
           <li>flightydeck_export_ics</li>
           <li class="w">flightydeck_add_flight</li>
           <li class="w">flightydeck_follow_flight</li>
+          <li class="w">flightydeck_set_ticket</li>
           <li class="d">flightydeck_remove_flight</li>
         </ul>
       </div>
@@ -241,7 +246,7 @@ arrives   15:30      15:55      —
           <article class="cls write">
             <span class="tag">Write</span>
             <h3>On unless read-only</h3>
-            <p>add, follow. Checks the flight isn't already tracked, and spaces out calls to the API. <code>--dry-run</code> looks the flight up without adding it.</p>
+            <p>add, follow, ticket. Checks the flight isn't already tracked, and spaces out calls to the API. <code>--dry-run</code> shows what would happen without sending anything.</p>
             <p class="env"><code>FLIGHTY_READ_ONLY=1</code> turns off every write, and overrides everything else.</p>
           </article>
           <article class="cls destr">
@@ -294,7 +299,7 @@ arrives   15:30      15:55      —
         </details>
         <details>
           <summary>Can it break my Flighty data?</summary>
-          <p>Reads open the database read-only. Adding and following go through the same API the app uses. Removing flights is off unless you explicitly enable it, and <code>FLIGHTY_READ_ONLY=1</code> turns off all writes.</p>
+          <p>Reads open the database read-only. Adding, following and setting ticket details go through the same API the app uses. Removing flights is off unless you explicitly enable it, and <code>FLIGHTY_READ_ONLY=1</code> turns off all writes.</p>
         </details>
         <details>
           <summary>What happens when Flighty updates?</summary>
