@@ -11,16 +11,20 @@ use crate::ops::{
     about, connections, connections::ConnArgs, flights, flights::CurrentArgs, flights::GetArgs,
     flights::ListArgs, flights::SearchArgs, friends, friends::FriendArgs, ics, ics::IcsArgs,
     reference, reference::LookupArgs, stats, stats::StatsArgs, status, status::FlightRef, write,
-    write::AddArgs, write::RemoveArgs,
+    write::AddArgs, write::RemoveArgs, write::TicketCmdArgs,
 };
 
 const INSTRUCTIONS: &str = "Unofficial access to the user's Flighty flights (not affiliated with Flighty). \
-Reads come from the local Flighty database. Write tools (add/follow) exist only when the server is not in \
+Reads come from the local Flighty database. Write tools (add/follow/set_ticket) exist only when the server is not in \
 read-only mode (FLIGHTY_READ_ONLY=1); remove exists only with FLIGHTY_ALLOW_REMOVE=1 and needs yes=true. \
 Times are given as utc, local and tz.";
 
 /// Tools that change the account. Registered only if `ctx.allows(Class::Write)`.
-const WRITE_TOOLS: &[&str] = &["flightydeck_add_flight", "flightydeck_follow_flight"];
+const WRITE_TOOLS: &[&str] = &[
+    "flightydeck_add_flight",
+    "flightydeck_follow_flight",
+    "flightydeck_set_ticket",
+];
 /// Registered only if `ctx.allows(Class::Destructive)`.
 const DESTRUCTIVE_TOOLS: &[&str] = &["flightydeck_remove_flight"];
 
@@ -197,7 +201,7 @@ impl FlightyServer {
 
     #[tool(
         name = "flightydeck_add_flight",
-        description = "Add a flight you are flying to your Flighty account (code + local departure date YYYY-MM-DD); dry_run=true only looks it up.",
+        description = "Add a flight you are flying to your Flighty account (code + local departure date YYYY-MM-DD); dry_run=true only looks it up. Optional ticket: seat, seat_position, cabin, booking_ref, reason.",
         annotations(
             read_only_hint = false,
             destructive_hint = false,
@@ -219,6 +223,20 @@ impl FlightyServer {
     )]
     async fn follow_flight(&self, Parameters(a): Parameters<AddArgs>) -> ToolResult {
         self.run(move |c| write::follow(c, &a)).await
+    }
+
+    #[tool(
+        name = "flightydeck_set_ticket",
+        description = "Set seat, seat_position (aisle|middle|window|jumpseat|pilot|captain), cabin (economy|premium-economy|business|first|crew|private-jet), booking_ref or reason (leisure|business|crew) on one of your flights (code or UUID, optional date). Fields left out keep their value; dry_run=true shows the result without sending.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = true
+        )
+    )]
+    async fn set_ticket(&self, Parameters(a): Parameters<TicketCmdArgs>) -> ToolResult {
+        self.run(move |c| write::ticket(c, &a)).await
     }
 
     #[tool(

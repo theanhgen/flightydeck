@@ -73,6 +73,52 @@ pub fn remove_request(flight_id: &str, unix_ts: u64, seq: u64) -> Vec<u8> {
     msg
 }
 
+/// A ticket as the app sends it: every field is optional, and an absent one is cleared on the
+/// server, so callers send the full ticket, not just what changed. Enums are wire numbers.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct TicketFields {
+    pub pnr: Option<String>,
+    pub seat_number: Option<String>,
+    pub seat_position: Option<u64>,
+    pub cabin_class: Option<u64>,
+    pub flight_reason: Option<u64>,
+}
+
+/// Ticket change: `{1: {1: {1: unixTs, 2: nanos}, 24: {1: flightUuid, 2: pnr, 3: seatNumber,
+/// 4: seatPosition, 5: cabinClass, 6: flightReason}}}`. Field numbers from the app's
+/// SwiftProtobuf name maps (`ticketInfoAction` is field 24 of the change entry); enum fields are
+/// written even when 0, since 0 is a real value (AISLE, ECONOMY, LEISURE).
+pub fn ticket_request(flight_id: &str, t: &TicketFields, unix_ts: u64, nanos: u64) -> Vec<u8> {
+    let mut stamp = Vec::new();
+    put_varint_field(&mut stamp, 1, unix_ts);
+    if nanos > 0 {
+        put_varint_field(&mut stamp, 2, nanos);
+    }
+    let mut ticket = Vec::new();
+    put_bytes_field(&mut ticket, 1, flight_id.as_bytes());
+    if let Some(v) = &t.pnr {
+        put_bytes_field(&mut ticket, 2, v.as_bytes());
+    }
+    if let Some(v) = &t.seat_number {
+        put_bytes_field(&mut ticket, 3, v.as_bytes());
+    }
+    for (field, v) in [
+        (4, t.seat_position),
+        (5, t.cabin_class),
+        (6, t.flight_reason),
+    ] {
+        if let Some(v) = v {
+            put_varint_field(&mut ticket, field, v);
+        }
+    }
+    let mut entry = Vec::new();
+    put_bytes_field(&mut entry, 1, &stamp);
+    put_bytes_field(&mut entry, 24, &ticket);
+    let mut msg = Vec::new();
+    put_bytes_field(&mut msg, 1, &entry);
+    msg
+}
+
 // --- walker ---
 
 enum Value<'a> {
@@ -238,6 +284,38 @@ mod tests {
         let mut want = vec![0x0a, entry.len() as u8];
         want.extend_from_slice(&entry);
         assert_eq!(got, want);
+    }
+
+    #[test]
+    fn ticket_request_bytes() {
+        let t = TicketFields {
+            pnr: Some("P".into()),
+            seat_number: Some("1A".into()),
+            seat_position: Some(0),
+            cabin_class: Some(1),
+            flight_reason: None,
+        };
+        let got = ticket_request("x", &t, 300, 5);
+        // {1: {1: {1: 300, 2: 5}, 24: {1: "x", 2: "P", 3: "1A", 4: 0, 5: 1}}}
+        let stamp = [0x08, 0xac, 0x02, 0x10, 0x05];
+        let ticket = [
+            0x0a, 1, b'x', 0x12, 1, b'P', 0x1a, 2, b'1', b'A', 0x20, 0, 0x28, 1,
+        ];
+        let mut entry = vec![0x0a, stamp.len() as u8];
+        entry.extend_from_slice(&stamp);
+        entry.extend_from_slice(&[0xc2, 0x01, ticket.len() as u8]);
+        entry.extend_from_slice(&ticket);
+        let mut want = vec![0x0a, entry.len() as u8];
+        want.extend_from_slice(&entry);
+        assert_eq!(got, want);
+        // An empty ticket still names the flight, which clears it on the server.
+        let empty = ticket_request("x", &TicketFields::default(), 300, 0);
+        assert_eq!(
+            empty,
+            [
+                0x0a, 11, 0x0a, 3, 0x08, 0xac, 0x02, 0xc2, 0x01, 3, 0x0a, 1, b'x'
+            ]
+        );
     }
 
     #[test]

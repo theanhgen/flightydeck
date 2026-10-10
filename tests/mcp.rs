@@ -26,7 +26,11 @@ const READ_TOOLS: &[&str] = &[
     "flightydeck_about",
     "flightydeck_export_ics",
 ];
-const WRITE_TOOLS: &[&str] = &["flightydeck_add_flight", "flightydeck_follow_flight"];
+const WRITE_TOOLS: &[&str] = &[
+    "flightydeck_add_flight",
+    "flightydeck_follow_flight",
+    "flightydeck_set_ticket",
+];
 const REMOVE_TOOL: &str = "flightydeck_remove_flight";
 
 /// A running `flightydeck mcp` with an initialized session.
