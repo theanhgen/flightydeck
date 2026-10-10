@@ -8,7 +8,7 @@ use flightydeck::ops::{
     about, connections, connections::ConnArgs, flights, flights::CurrentArgs, flights::GetArgs,
     flights::ListArgs, flights::SearchArgs, friends, friends::FriendArgs, ics, ics::IcsArgs,
     reference, reference::LookupArgs, stats, stats::StatsArgs, status, status::FlightRef, watch,
-    watch::WatchArgs, write, write::AddArgs, write::RemoveArgs,
+    watch::WatchArgs, write, write::AddArgs, write::RemoveArgs, write::TicketCmdArgs,
 };
 use flightydeck::render::{self, Format};
 use flightydeck::{Error, Result};
@@ -19,7 +19,7 @@ use flightydeck::{Error, Result};
     name = "flightydeck",
     version,
     long_about = "Unofficial CLI for your Flighty flights (macOS). Not affiliated with Flighty.\n\n\
-        Reads come from the Flighty app's local database; add/follow/remove go through Flighty's API.\n\
+        Reads come from the Flighty app's local database; add/follow/ticket/remove go through Flighty's API.\n\
         FLIGHTY_READ_ONLY=1 disables every write. FLIGHTY_ALLOW_REMOVE=1 enables the experimental remove.\n\n\
         Exit codes: 0 ok, 1 error, 2 bad input, 3 not signed in / no database, 4 Flighty API error,\n\
         5 refused by policy, 6 not found."
@@ -87,11 +87,27 @@ enum Cmd {
         long_about = "Add a flight you are flying to your Flighty account.\n\n\
         The date is the local departure date at the origin airport. Refused in read-only mode \
         (FLIGHTY_READ_ONLY=1). If the flight already looks tracked, nothing is sent unless --force.\n\n\
-        Examples:\n  flightydeck add UA901 2031-03-14\n  flightydeck add \"BA 286\" 2031-04-02 --force"
+        Ticket flags (--seat, --seat-position, --cabin, --booking-ref, --reason) are set right after \
+        adding.\n\n\
+        Examples:\n  flightydeck add UA901 2031-03-14\n  flightydeck add \"BA 286\" 2031-04-02 --force\n  \
+        flightydeck add UA901 2031-03-14 --seat 23A --cabin economy --booking-ref ABC123"
     )]
     Add(AddArgs),
     /// Follow a flight you are not on.
     Follow(AddArgs),
+    /// Set seat, cabin, booking reference or trip reason on one of your flights.
+    #[command(
+        long_about = "Set seat, cabin, booking reference or trip reason on one of your flights.\n\n\
+        Fields you leave out keep their current value. Goes through Flighty's sync API, the way the \
+        app saves a ticket; the Mac app shows the change after its next sync. Refused in read-only \
+        mode (FLIGHTY_READ_ONLY=1) except with --dry-run.\n\n\
+        Seat positions: aisle, middle, window, jumpseat, pilot, captain. Cabins: economy, \
+        premium-economy, business, first, crew, private-jet. Reasons: leisure, business, crew.\n\n\
+        Examples:\n  flightydeck ticket BA286 --seat 23A --seat-position window\n  \
+        flightydeck ticket \"UA 901\" --date 2031-03-14 --booking-ref ABC123 --cabin business\n  \
+        flightydeck ticket BA286 --cabin first --dry-run"
+    )]
+    Ticket(TicketCmdArgs),
     /// EXPERIMENTAL: remove a flight from your Flighty account.
     #[command(
         long_about = "EXPERIMENTAL: remove a flight from your Flighty account. Cannot be undone.\n\n\
@@ -142,6 +158,7 @@ fn run(cli: Cli) -> Result<()> {
         Cmd::Airlines(a) => render::print(&reference::airlines(&ctx, &a)?, f),
         Cmd::Add(a) => render::print(&write::add(&ctx, &a)?, f),
         Cmd::Follow(a) => render::print(&write::follow(&ctx, &a)?, f),
+        Cmd::Ticket(a) => render::print(&write::ticket(&ctx, &a)?, f),
         Cmd::Remove(mut a) => {
             // Policy first, so nobody is asked to confirm something that would be refused anyway.
             ctx.guard(Class::Destructive)?;

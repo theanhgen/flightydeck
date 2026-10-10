@@ -15,6 +15,7 @@ fn args(flight: &str, date: &str) -> AddArgs {
         date: date.into(),
         force: false,
         dry_run: false,
+        ticket: Default::default(),
     }
 }
 

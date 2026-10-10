@@ -1,18 +1,18 @@
 ---
 name: flightydeck
-description: Read and manage the user's flights from the Flighty macOS app with the `flightydeck` CLI. Use when the user asks about their flights, trips, upcoming or past flights, flight status, delays, gates, layovers, flight stats, friends' flights, airports or airlines, or wants to add or follow a flight in Flighty, or export flights to a calendar (.ics) file.
+description: Read and manage the user's flights from the Flighty macOS app with the `flightydeck` CLI. Use when the user asks about their flights, trips, upcoming or past flights, flight status, delays, gates, layovers, flight stats, friends' flights, airports or airlines, or wants to add or follow a flight in Flighty or set its seat, cabin or booking reference, or export flights to a calendar (.ics) file.
 ---
 
 # flightydeck
 
 `flightydeck` is an unofficial CLI for the Flighty Mac app. Reads come from the app's local
-database; `add` and `follow` call Flighty's API. macOS only.
+database; `add`, `follow` and `ticket` call Flighty's API. macOS only.
 
 ## Rules
 
 - **Always pass `-o json`** and parse the result. The table output is for humans and may change.
 - **Branch on the exit code**, not on the message text (see below).
-- **Confirm with the user before `add`, `follow` or `remove`.** Show the flight number, date and
+- **Confirm with the user before `add`, `follow`, `ticket` or `remove`.** Show the flight number, date and
   what will happen, and run it only after they agree.
 - **Never try to read the auth token**, from the database, the keychain or anywhere else, and
   never query the Flighty database directly. `flightydeck about` says whether a token exists; that's
@@ -42,6 +42,7 @@ database; `add` and `follow` call Flighty's API. macOS only.
 | Check a flight exists before adding | `flightydeck add UA901 2031-03-18 --dry-run -o json` (looks it up, adds nothing) |
 | Add a flight they're on | `flightydeck add UA901 2031-03-18 -o json` after the user confirms |
 | Track someone else's flight | `flightydeck follow BA286 2031-03-14 -o json` after the user confirms |
+| Set seat, cabin, booking reference, reason | `flightydeck ticket BA286 --date 2031-03-14 --seat 23A --booking-ref ABC123 -o json` after the user confirms; `--dry-run` first shows the full resulting ticket. Seat positions: aisle, middle, window, jumpseat, pilot, captain. Cabins: economy, premium-economy, business, first, crew, private-jet. Reasons: leisure, business, crew. `add` takes the same flags |
 | Health check | `flightydeck about -o json` |
 
 Run `flightydeck <command> --help` for all flags.

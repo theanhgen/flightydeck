@@ -224,6 +224,33 @@ impl Client {
     }
 }
 
+impl Client {
+    /// Replace the owner's ticket on a flight via the sync endpoint, the way the app does
+    /// (`ticketInfoAction`). Posted to the stored sync URL as is, like the app's own sync.
+    pub fn set_ticket(
+        &self,
+        sync_url: &str,
+        flight_id: &str,
+        ticket: &proto::TicketFields,
+    ) -> Result<()> {
+        if !proto::is_uuid(flight_id) {
+            return Err(Error::BadInput(format!(
+                "not a Flighty flight id: {flight_id:?}"
+            )));
+        }
+        let url = Url::parse(sync_url)
+            .map_err(|_| Error::NotReady("Flighty's stored sync URL is not a valid URL".into()))?;
+        let now = chrono::Utc::now();
+        let body = proto::ticket_request(
+            flight_id,
+            ticket,
+            now.timestamp().max(0) as u64,
+            u64::from(now.timestamp_subsec_nanos()),
+        );
+        ok_body(self.write_post(&url, body)?, "ticket update").map(drop)
+    }
+}
+
 fn retryable(s: StatusCode) -> bool {
     s == StatusCode::TOO_MANY_REQUESTS || s.is_server_error()
 }
@@ -556,6 +583,29 @@ mod tests {
             Some(FLIGHT.as_bytes())
         );
         assert!(proto::field_path(&r.body, &[1, 1]).is_some());
+    }
+
+    #[test]
+    fn set_ticket_posts_to_sync_url_unchanged() {
+        let (_d, ctx) = testing::ctx();
+        let mock = Mock::start(vec![(200, vec![])]);
+        let c = Client::for_test(&ctx, &mock.base, Duration::ZERO);
+        let t = proto::TicketFields {
+            seat_number: Some("23A".into()),
+            ..Default::default()
+        };
+        c.set_ticket(&format!("{}v1/sync/full?cursor=abc", mock.base), FLIGHT, &t)
+            .unwrap();
+        let r = &mock.requests()[0];
+        assert_eq!(r.target, "/v1/sync/full?cursor=abc");
+        assert_eq!(r.method, "POST");
+        assert_eq!(
+            proto::field_path(&r.body, &[1, 24, 1]),
+            Some(FLIGHT.as_bytes())
+        );
+        assert_eq!(proto::field_path(&r.body, &[1, 24, 3]), Some(&b"23A"[..]));
+        assert!(c.set_ticket(&mock.base, "../x", &t).is_err());
+        assert_eq!(mock.requests().len(), 1);
     }
 
     #[test]

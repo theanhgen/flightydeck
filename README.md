@@ -67,8 +67,9 @@ Run `flightydeck <command> --help` for every flag.
 | `airports` | Search airports by IATA, ICAO, city or name | read |
 | `airlines` | Search airlines by IATA, ICAO or name | read |
 | `about` | Version, mode, whether the database and a token were found (never the token) | read |
-| `add` | Add a flight you're on (`<FLIGHT_NO> <DATE>`, `--force`, `--dry-run`) | write |
-| `follow` | Track someone else's flight (same arguments as `add`) | write |
+| `add` | Add a flight you're on (`<FLIGHT_NO> <DATE>`, `--force`, `--dry-run`, plus the `ticket` flags) | write |
+| `follow` | Track someone else's flight (same arguments as `add`, no ticket flags) | write |
+| `ticket` | Set seat, cabin, booking reference or trip reason on your flight (`--seat`, `--seat-position`, `--cabin`, `--booking-ref`, `--reason`, `--date`, `--dry-run`). Fields you leave out keep their value | write |
 | `remove` | Remove a flight by id. **Experimental**, see [Safety](#safety) | destructive |
 | `mcp` | Run the MCP server over stdio | — |
 
@@ -141,7 +142,7 @@ Any MCP client that can launch a stdio server works the same way: the command is
 | `flightydeck_list_friend_flights`, `flightydeck_get_flight_stats`, `flightydeck_get_connections` | read |
 | `flightydeck_search_airports`, `flightydeck_search_airlines`, `flightydeck_about` | read |
 | `flightydeck_export_ics` | read |
-| `flightydeck_add_flight`, `flightydeck_follow_flight` | write (not registered when read-only) |
+| `flightydeck_add_flight`, `flightydeck_follow_flight`, `flightydeck_set_ticket` | write (not registered when read-only) |
 | `flightydeck_remove_flight` | destructive (registered only with `FLIGHTY_ALLOW_REMOVE=1`) |
 
 Every tool calls the same library function as the matching CLI command.
@@ -156,7 +157,7 @@ Every command is in one safety class, and the policy is enforced in the shared l
 and the MCP server follow the same rules.
 
 - **Read** is always on. The database is opened read-only, once per operation.
-- **Write** (`add`, `follow`) is on unless `FLIGHTY_READ_ONLY=1`. Before subscribing it checks
+- **Write** (`add`, `follow`, `ticket`) is on unless `FLIGHTY_READ_ONLY=1`. Before subscribing it checks
   the flight isn't already tracked (`--force` overrides), and write calls are spaced out with
   backoff on rate limits. `--dry-run` only looks the flight up and reports the match; nothing
   is added, so it also works in read-only mode.

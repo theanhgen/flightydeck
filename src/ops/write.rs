@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use crate::api::Client;
 use crate::ctx::{Class, Ctx};
 use crate::error::{Error, Result};
+use crate::ops::flights;
 use crate::render::Render;
 use crate::{creds, db, owner, proto, time};
 
@@ -28,6 +29,63 @@ pub struct AddArgs {
     #[arg(long)]
     #[serde(default)]
     pub dry_run: bool,
+    /// Ticket details to set right after adding (add only; follow refuses them).
+    #[command(flatten)]
+    #[serde(flatten)]
+    pub ticket: TicketArgs,
+}
+
+/// Seat, cabin, booking reference and trip reason. Each is optional; fields left out keep
+/// their current value.
+#[derive(Debug, Clone, Default, Deserialize, JsonSchema, clap::Args)]
+pub struct TicketArgs {
+    /// Seat, e.g. "23A".
+    #[arg(long)]
+    #[serde(default)]
+    pub seat: Option<String>,
+    /// aisle, middle, window, jumpseat, pilot or captain.
+    #[arg(long)]
+    #[serde(default)]
+    pub seat_position: Option<String>,
+    /// economy, premium-economy, business, first, crew or private-jet.
+    #[arg(long)]
+    #[serde(default)]
+    pub cabin: Option<String>,
+    /// Booking reference (PNR), e.g. "ABC123".
+    #[arg(long)]
+    #[serde(default)]
+    pub booking_ref: Option<String>,
+    /// Why you fly: leisure, business or crew.
+    #[arg(long)]
+    #[serde(default)]
+    pub reason: Option<String>,
+}
+
+impl TicketArgs {
+    fn is_empty(&self) -> bool {
+        self.seat.is_none()
+            && self.seat_position.is_none()
+            && self.cabin.is_none()
+            && self.booking_ref.is_none()
+            && self.reason.is_none()
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, JsonSchema, clap::Args)]
+pub struct TicketCmdArgs {
+    /// Flight code ("BA286") or Flighty flight UUID, one of your own or followed flights.
+    pub flight: String,
+    /// Departure date YYYY-MM-DD (local). Default: nearest to now.
+    #[arg(long)]
+    #[serde(default)]
+    pub date: Option<String>,
+    #[command(flatten)]
+    #[serde(flatten)]
+    pub ticket: TicketArgs,
+    /// Show the ticket that would be sent; nothing is changed.
+    #[arg(long)]
+    #[serde(default)]
+    pub dry_run: bool,
 }
 
 #[derive(Debug, Clone, Deserialize, JsonSchema, clap::Args)]
@@ -42,13 +100,161 @@ pub struct RemoveArgs {
 
 #[derive(Debug, Clone, Serialize, JsonSchema)]
 pub struct WriteResult {
-    /// "added" | "followed" | "would_add" | "would_follow" | "already_tracked" | "removed"
+    /// "added" | "followed" | "would_add" | "would_follow" | "already_tracked" | "removed" |
+    /// "ticket_updated" | "would_update_ticket"
     pub outcome: String,
     pub flight_code: Option<String>,
     pub date: Option<String>,
     pub flight_id: Option<String>,
     pub airline: Option<String>,
+    /// The full ticket as sent (or as it would be sent on a dry run).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ticket: Option<TicketView>,
     pub message: String,
+}
+
+#[derive(Debug, Clone, Serialize, JsonSchema, PartialEq, Eq)]
+pub struct TicketView {
+    pub booking_reference: Option<String>,
+    pub seat: Option<String>,
+    pub seat_position: Option<String>,
+    pub cabin: Option<String>,
+    pub reason: Option<String>,
+}
+
+// Wire numbers are the index: the app's protobuf enums start at 0 in this order.
+const SEAT_POSITIONS: &[&str] = &["aisle", "middle", "window", "jumpseat", "pilot", "captain"];
+const CABINS: &[&str] = &[
+    "economy",
+    "premium-economy",
+    "business",
+    "first",
+    "crew",
+    "private-jet",
+];
+const REASONS: &[&str] = &["leisure", "business", "crew"];
+
+/// "Premium Economy", "premium_economy", "premiumEconomy" (the app's DB form) → its wire number.
+fn enum_number(names: &[&str], value: &str) -> Option<u64> {
+    let squash = |s: &str| -> String {
+        s.chars()
+            .filter(|c| c.is_ascii_alphanumeric())
+            .flat_map(char::to_lowercase)
+            .collect()
+    };
+    let v = squash(value);
+    names.iter().position(|n| squash(n) == v).map(|i| i as u64)
+}
+
+fn enum_arg(what: &str, names: &[&str], value: &str) -> Result<u64> {
+    enum_number(names, value).ok_or_else(|| {
+        Error::BadInput(format!(
+            "invalid {what} {value:?}: expected one of {}",
+            names.join(", ")
+        ))
+    })
+}
+
+fn text_arg(what: &str, value: &str) -> Result<String> {
+    let v = value.trim();
+    if v.is_empty() || v.chars().count() > 20 || v.chars().any(char::is_control) {
+        return Err(Error::BadInput(format!(
+            "invalid {what} {value:?}: expected 1-20 characters"
+        )));
+    }
+    Ok(v.to_string())
+}
+
+/// Overlay the requested changes on the current ticket. Validates every argument.
+fn merge_ticket(current: proto::TicketFields, a: &TicketArgs) -> Result<proto::TicketFields> {
+    let mut t = current;
+    if let Some(v) = &a.seat {
+        t.seat_number = Some(text_arg("seat", v)?.to_uppercase());
+    }
+    if let Some(v) = &a.booking_ref {
+        t.pnr = Some(text_arg("booking reference", v)?.to_uppercase());
+    }
+    if let Some(v) = &a.seat_position {
+        t.seat_position = Some(enum_arg("seat position", SEAT_POSITIONS, v)?);
+    }
+    if let Some(v) = &a.cabin {
+        t.cabin_class = Some(enum_arg("cabin", CABINS, v)?);
+    }
+    if let Some(v) = &a.reason {
+        t.flight_reason = Some(enum_arg("reason", REASONS, v)?);
+    }
+    Ok(t)
+}
+
+fn ticket_view(t: &proto::TicketFields) -> TicketView {
+    let name = |names: &[&str], n: Option<u64>| {
+        n.and_then(|n| names.get(n as usize)).map(|s| s.to_string())
+    };
+    TicketView {
+        booking_reference: t.pnr.clone(),
+        seat: t.seat_number.clone(),
+        seat_position: name(SEAT_POSITIONS, t.seat_position),
+        cabin: name(CABINS, t.cabin_class),
+        reason: name(REASONS, t.flight_reason),
+    }
+}
+
+fn describe(v: &TicketView) -> String {
+    let parts: Vec<String> = [
+        v.seat.as_ref().map(|s| format!("seat {s}")),
+        v.seat_position.clone(),
+        v.cabin.clone(),
+        v.booking_reference.as_ref().map(|s| format!("booking {s}")),
+        v.reason.clone(),
+    ]
+    .into_iter()
+    .flatten()
+    .collect();
+    if parts.is_empty() {
+        "empty ticket".into()
+    } else {
+        parts.join(", ")
+    }
+}
+
+/// The owner's current ticket on a flight, as wire values. A stored value this version
+/// doesn't know is an error: sending without it would clear it on the server.
+fn current_ticket(
+    conn: &Connection,
+    owner_id: &str,
+    flight_id: &str,
+) -> Result<proto::TicketFields> {
+    let row: Option<[Option<String>; 5]> = conn
+        .query_row(
+            "SELECT pnr, seatNumber, seatPosition, cabinClass, flightReason FROM Ticket
+             WHERE userId = ?1 AND flightId = ?2 AND deleted IS NULL
+             ORDER BY lastUpdated DESC LIMIT 1",
+            [owner_id, flight_id],
+            |r| Ok([r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?]),
+        )
+        .optional()?;
+    let Some([pnr, seat, position, cabin, reason]) = row else {
+        return Ok(proto::TicketFields::default());
+    };
+    let stored = |what: &str, names: &[&str], v: Option<String>| -> Result<Option<u64>> {
+        v.filter(|s| !s.is_empty())
+            .map(|s| {
+                enum_number(names, &s).ok_or_else(|| {
+                    Error::Other(format!(
+                        "the flight's stored {what} {s:?} is unknown to this version; \
+                         update flightydeck or change the ticket in the Flighty app"
+                    ))
+                })
+            })
+            .transpose()
+    };
+    Ok(proto::TicketFields {
+        pnr: pnr.filter(|s| !s.is_empty()),
+        seat_number: seat.filter(|s| !s.is_empty()),
+        seat_position: stored("seat position", SEAT_POSITIONS, position)?,
+        cabin_class: stored("cabin", CABINS, cabin)?,
+        flight_reason: stored("reason", REASONS, reason)?,
+    })
 }
 
 impl Render for WriteResult {
@@ -69,6 +275,8 @@ struct Wanted {
     date: String,
     force: bool,
     dry_run: bool,
+    /// Ticket to set after adding; None when no ticket flag was given.
+    ticket: Option<proto::TicketFields>,
 }
 
 impl Wanted {
@@ -103,6 +311,9 @@ fn validate(a: &AddArgs) -> Result<Wanted> {
         date: date.to_string(),
         force: a.force,
         dry_run: a.dry_run,
+        ticket: (!a.ticket.is_empty())
+            .then(|| merge_ticket(proto::TicketFields::default(), &a.ticket))
+            .transpose()?,
     })
 }
 
@@ -132,6 +343,7 @@ pub fn add(ctx: &Ctx, a: &AddArgs) -> Result<WriteResult> {
 pub fn follow(ctx: &Ctx, a: &AddArgs) -> Result<WriteResult> {
     // Validate and check policy before owner resolution, which may read the token.
     check(ctx, a)?;
+    no_ticket_on_follow(a)?;
     follow_for(ctx, &owner_id(ctx)?, a, &Client::new(ctx)?)
 }
 
@@ -152,7 +364,20 @@ pub(crate) fn follow_for(
     a: &AddArgs,
     client: &Client,
 ) -> Result<WriteResult> {
-    track(ctx, owner_id, &check(ctx, a)?, false, client)
+    let w = check(ctx, a)?;
+    no_ticket_on_follow(a)?;
+    track(ctx, owner_id, &w, false, client)
+}
+
+fn no_ticket_on_follow(a: &AddArgs) -> Result<()> {
+    if a.ticket.is_empty() {
+        Ok(())
+    } else {
+        Err(Error::BadInput(
+            "ticket details belong to flights you fly; use add, or `ticket` on a flight you have"
+                .into(),
+        ))
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -229,6 +454,7 @@ fn already_tracked(w: &Wanted, flight_id: String) -> WriteResult {
         ),
         flight_id: Some(flight_id),
         airline: None,
+        ticket: None,
     }
 }
 
@@ -299,16 +525,32 @@ fn track(
             flight_code: Some(w.code()),
             date: Some(w.date.clone()),
             message: format!(
-                "Dry run: would {verb} {} on {} ({}, {flight_id}); nothing was sent.",
+                "Dry run: would {verb} {} on {} ({}, {flight_id}){}; nothing was sent.",
                 w.code(),
                 w.date,
-                airline.name
+                airline.name,
+                w.ticket
+                    .as_ref()
+                    .map(|t| format!(" with {}", describe(&ticket_view(t))))
+                    .unwrap_or_default()
             ),
             flight_id: Some(flight_id),
             airline: Some(airline.name.clone()),
+            ticket: w.ticket.as_ref().map(ticket_view),
         });
     }
     client.subscribe(&flight_id, passenger)?;
+    if let Some(t) = &w.ticket {
+        client
+            .set_ticket(&creds::sync_url(ctx)?, &flight_id, t)
+            .map_err(|e| {
+                Error::Api(format!(
+                    "added {} on {}, but setting its ticket failed ({e}); retry with `flightydeck ticket {flight_id}`",
+                    w.code(),
+                    w.date
+                ))
+            })?;
+    }
     let (outcome, verb) = if passenger {
         ("added", "Added")
     } else {
@@ -319,12 +561,17 @@ fn track(
         flight_code: Some(w.code()),
         date: Some(w.date.clone()),
         message: format!(
-            "{verb} {} on {} on the server; the Mac app shows it after its next sync.",
+            "{verb} {} on {}{} on the server; the Mac app shows it after its next sync.",
             w.code(),
-            w.date
+            w.date,
+            w.ticket
+                .as_ref()
+                .map(|t| format!(" with {}", describe(&ticket_view(t))))
+                .unwrap_or_default()
         ),
         flight_id: Some(flight_id),
         airline: Some(airline.name.clone()),
+        ticket: w.ticket.as_ref().map(ticket_view),
     })
 }
 
@@ -359,9 +606,84 @@ pub(crate) fn remove_with(ctx: &Ctx, a: &RemoveArgs, client: &Client) -> Result<
         date: None,
         flight_id: Some(id.to_string()),
         airline: None,
+        ticket: None,
         message: format!(
             "Removed flight {id} on the server (experimental); the Mac app drops it after its next sync."
         ),
+    })
+}
+
+/// Set seat, cabin, booking reference or reason on one of your flights. Fields not given keep
+/// their current value (the server replaces the whole ticket, so the rest is read locally).
+pub fn ticket(ctx: &Ctx, a: &TicketCmdArgs) -> Result<WriteResult> {
+    check_ticket(ctx, a)?;
+    ticket_with(ctx, a, &Client::new(ctx)?)
+}
+
+fn check_ticket(ctx: &Ctx, a: &TicketCmdArgs) -> Result<()> {
+    if a.ticket.is_empty() {
+        return Err(Error::BadInput(
+            "nothing to change: give --seat, --seat-position, --cabin, --booking-ref or --reason"
+                .into(),
+        ));
+    }
+    // Validate every value before anything is read or sent.
+    merge_ticket(proto::TicketFields::default(), &a.ticket)?;
+    if !a.dry_run {
+        ctx.guard(Class::Write)?;
+    }
+    Ok(())
+}
+
+pub(crate) fn ticket_with(ctx: &Ctx, a: &TicketCmdArgs, client: &Client) -> Result<WriteResult> {
+    check_ticket(ctx, a)?;
+    let (flight, current) = {
+        let conn = db::open(ctx)?;
+        let owner = owner::resolve(ctx, &conn)?.user_id;
+        let flight = flights::find(&conn, &owner, &a.flight, a.date.as_deref())?;
+        let current = current_ticket(&conn, &owner, &flight.id)?;
+        (flight, current)
+    };
+    let date = flight
+        .departure_scheduled
+        .as_ref()
+        .and_then(|s| s.local.as_ref())
+        .map(|l| l.chars().take(10).collect::<String>());
+    let next = merge_ticket(current, &a.ticket)?;
+    let view = ticket_view(&next);
+    let what = format!(
+        "{}{}",
+        flight.flight_code,
+        date.as_ref()
+            .map(|d| format!(" on {d}"))
+            .unwrap_or_default()
+    );
+    let (outcome, message) = if a.dry_run {
+        (
+            "would_update_ticket",
+            format!(
+                "Dry run: would set {what} to {}; nothing was sent.",
+                describe(&view)
+            ),
+        )
+    } else {
+        client.set_ticket(&creds::sync_url(ctx)?, &flight.id, &next)?;
+        (
+            "ticket_updated",
+            format!(
+                "Ticket for {what} set to {} on the server; the Mac app shows it after its next sync.",
+                describe(&view)
+            ),
+        )
+    };
+    Ok(WriteResult {
+        outcome: outcome.into(),
+        flight_code: Some(flight.flight_code.clone()),
+        date,
+        flight_id: Some(flight.id),
+        airline: flight.airline_name,
+        ticket: Some(view),
+        message,
     })
 }
 
@@ -384,6 +706,7 @@ mod tests {
             date: date.into(),
             force: false,
             dry_run: false,
+            ticket: TicketArgs::default(),
         }
     }
 
@@ -456,6 +779,176 @@ mod tests {
             yes: true,
         };
         assert!(matches!(remove_with(&ctx, &rm, &c), Err(Error::Refused(_))));
+        assert!(mock.requests().is_empty());
+    }
+
+    fn set_sync_url(ctx: &Ctx, mock: &Mock) {
+        let conn = rusqlite::Connection::open(&ctx.db_path).unwrap();
+        conn.execute(
+            "UPDATE SyncInfo SET nextURL = ?1",
+            [format!("{}v1/sync/full?cursor=test", mock.base)],
+        )
+        .unwrap();
+    }
+
+    fn ticket_args(flight: &str, t: TicketArgs) -> TicketCmdArgs {
+        TicketCmdArgs {
+            flight: flight.into(),
+            date: None,
+            ticket: t,
+            dry_run: false,
+        }
+    }
+
+    #[test]
+    fn enum_names_match_app_forms() {
+        assert_eq!(enum_number(CABINS, "premiumEconomy"), Some(1));
+        assert_eq!(enum_number(CABINS, "Premium Economy"), Some(1));
+        assert_eq!(enum_number(CABINS, "private_jet"), Some(5));
+        assert_eq!(enum_number(SEAT_POSITIONS, "WINDOW"), Some(2));
+        assert_eq!(enum_number(SEAT_POSITIONS, "aisle"), Some(0));
+        assert_eq!(enum_number(REASONS, "business"), Some(1));
+        assert_eq!(enum_number(CABINS, "coach"), None);
+    }
+
+    #[test]
+    fn ticket_keeps_current_fields_and_sends_full_ticket() {
+        let (_d, ctx) = testing::ctx();
+        let mock = Mock::start(vec![(200, vec![])]);
+        set_sync_url(&ctx, &mock);
+        let c = client(&ctx, &mock);
+        let t = TicketArgs {
+            seat: Some(" 14c ".into()),
+            seat_position: Some("aisle".into()),
+            ..Default::default()
+        };
+        let r = ticket_with(&ctx, &ticket_args(F01, t), &c).unwrap();
+        assert_eq!(r.outcome, "ticket_updated");
+        let v = r.ticket.unwrap();
+        assert_eq!(v.seat.as_deref(), Some("14C"));
+        assert_eq!(v.seat_position.as_deref(), Some("aisle"));
+        // Kept from the stored ticket (TEST01, economy).
+        assert_eq!(v.booking_reference.as_deref(), Some("TEST01"));
+        assert_eq!(v.cabin.as_deref(), Some("economy"));
+        let reqs = mock.requests();
+        assert_eq!(reqs.len(), 1);
+        assert_eq!(reqs[0].target, "/v1/sync/full?cursor=test");
+        let body = &reqs[0].body;
+        assert_eq!(proto::field_path(body, &[1, 24, 1]), Some(F01.as_bytes()));
+        assert_eq!(proto::field_path(body, &[1, 24, 2]), Some(&b"TEST01"[..]));
+        assert_eq!(proto::field_path(body, &[1, 24, 3]), Some(&b"14C"[..]));
+        let want = proto::ticket_request(
+            F01,
+            &proto::TicketFields {
+                pnr: Some("TEST01".into()),
+                seat_number: Some("14C".into()),
+                seat_position: Some(0),
+                cabin_class: Some(0),
+                flight_reason: None,
+            },
+            0,
+            0,
+        );
+        // Same ticket bytes as the encoder, apart from the timestamp.
+        let tail = |b: &[u8]| b[b.len() - (want.len() - 7)..].to_vec();
+        assert_eq!(tail(body), tail(&want));
+    }
+
+    #[test]
+    fn ticket_dry_run_and_bad_input_send_nothing() {
+        let (_d, mut ctx) = testing::ctx();
+        let mock = Mock::start(vec![]);
+        set_sync_url(&ctx, &mock);
+        let c = client(&ctx, &mock);
+        let mut a = ticket_args(
+            F01,
+            TicketArgs {
+                cabin: Some("business".into()),
+                ..Default::default()
+            },
+        );
+        a.dry_run = true;
+        ctx.read_only = true;
+        let r = ticket_with(&ctx, &a, &c).unwrap();
+        assert_eq!(r.outcome, "would_update_ticket");
+        assert_eq!(r.ticket.unwrap().cabin.as_deref(), Some("business"));
+        a.dry_run = false;
+        assert!(matches!(ticket_with(&ctx, &a, &c), Err(Error::Refused(_))));
+        ctx.read_only = false;
+        for bad in [
+            TicketArgs::default(),
+            TicketArgs {
+                cabin: Some("coach".into()),
+                ..Default::default()
+            },
+            TicketArgs {
+                seat: Some("   ".into()),
+                ..Default::default()
+            },
+            TicketArgs {
+                booking_ref: Some("X".repeat(21)),
+                ..Default::default()
+            },
+        ] {
+            let e = ticket_with(&ctx, &ticket_args(F01, bad), &c).unwrap_err();
+            assert!(matches!(e, Error::BadInput(_)), "{e}");
+        }
+        assert!(mock.requests().is_empty());
+    }
+
+    #[test]
+    fn ticket_refuses_unknown_stored_value() {
+        let (_d, ctx) = testing::ctx();
+        let mock = Mock::start(vec![]);
+        set_sync_url(&ctx, &mock);
+        let conn = rusqlite::Connection::open(&ctx.db_path).unwrap();
+        conn.execute("UPDATE Ticket SET cabinClass = 'spaceship'", [])
+            .unwrap();
+        drop(conn);
+        let a = ticket_args(
+            F01,
+            TicketArgs {
+                seat: Some("1A".into()),
+                ..Default::default()
+            },
+        );
+        assert!(ticket_with(&ctx, &a, &client(&ctx, &mock)).is_err());
+        assert!(mock.requests().is_empty());
+    }
+
+    #[test]
+    fn add_with_ticket_subscribes_then_sets_it() {
+        let (_d, ctx) = testing::ctx();
+        let mock = Mock::start(vec![(200, found(NEW)), (200, vec![]), (200, vec![])]);
+        set_sync_url(&ctx, &mock);
+        let c = client(&ctx, &mock);
+        let mut a = args("IB999", "2031-03-17");
+        a.ticket.booking_ref = Some("abc123".into());
+        a.ticket.cabin = Some("first".into());
+        let r = add_for(&ctx, OWNER, &a, &c).unwrap();
+        assert_eq!(r.outcome, "added");
+        assert_eq!(
+            r.ticket.unwrap().booking_reference.as_deref(),
+            Some("ABC123")
+        );
+        let reqs = mock.requests();
+        assert_eq!(reqs.len(), 3);
+        assert!(reqs[1].target.contains("/subscribe?is_passenger=true"));
+        assert_eq!(reqs[2].target, "/v1/sync/full?cursor=test");
+        assert_eq!(
+            proto::field_path(&reqs[2].body, &[1, 24, 1]),
+            Some(NEW.as_bytes())
+        );
+    }
+
+    #[test]
+    fn follow_refuses_ticket_flags() {
+        let (_d, ctx) = testing::ctx();
+        let mock = Mock::start(vec![]);
+        let mut a = args("IB999", "2031-03-17");
+        a.ticket.seat = Some("1A".into());
+        let e = follow_for(&ctx, OWNER, &a, &client(&ctx, &mock)).unwrap_err();
+        assert!(matches!(e, Error::BadInput(_)));
         assert!(mock.requests().is_empty());
     }
 
